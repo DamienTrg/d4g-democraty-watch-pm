@@ -42,3 +42,28 @@ export async function query<T extends QueryResultRow = QueryResultRow>(
   const result = await getPool().query<T>(text, params);
   return result.rows;
 }
+
+/**
+ * Comme query(), mais pour les requêtes d'analyse longues : relève le délai
+ * maximal d'exécution le temps d'une transaction (SET LOCAL), sans modifier
+ * le réglage de la base. Fonctionne aussi derrière un pooler (PgBouncer…).
+ */
+export async function longQuery<T extends QueryResultRow = QueryResultRow>(
+  text: string,
+  params?: unknown[],
+  timeoutMs = Number(process.env.DATABASE_LONG_QUERY_TIMEOUT_MS ?? 300_000),
+): Promise<T[]> {
+  const client = await getPool().connect();
+  try {
+    await client.query("begin read only");
+    await client.query(`set local statement_timeout = ${Math.max(0, Math.floor(timeoutMs))}`);
+    const result = await client.query<T>(text, params);
+    await client.query("commit");
+    return result.rows;
+  } catch (error) {
+    await client.query("rollback").catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}

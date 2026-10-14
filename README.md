@@ -35,5 +35,6 @@ L'endpoint `GET /api/health` renvoie le même diagnostic en JSON.
 |---|---|
 | `DATABASE_URL` | Chaîne de connexion `postgresql://user:password@host:5432/db` |
 | `DATABASE_SSL` | `true` par défaut ; `false` pour une base locale sans SSL |
+| `DATABASE_LONG_QUERY_TIMEOUT_MS` | Délai max. des requêtes de statistiques (défaut : 300000 = 5 min) |
 
 Ne commitez jamais `.env.local` : il contient vos identifiants.

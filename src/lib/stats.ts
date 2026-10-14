@@ -1,5 +1,5 @@
 import "server-only";
-import { query } from "@/lib/db";
+import { longQuery } from "@/lib/db";
 
 /*
  * Indicateurs sur les textes de loi.
@@ -49,13 +49,6 @@ export type IdentiquesStats = {
   nbAmbigus: number;
   distribution: Bucket[];
   topTextes: TexteIdentiques[];
-};
-
-export type Stats = {
-  lois: LoiStats;
-  amendements: AmendementStats;
-  identiques: IdentiquesStats;
-  calculeLe: Date;
 };
 
 // Lois = textes JORF principaux des dossiers législatifs Légifrance.
@@ -181,6 +174,12 @@ top as (
   group by texte
   order by copies desc
   limit 10
+),
+totaux_top as (
+  select texte, count(*)::int as amendements
+  from base
+  where texte in (select texte from top)
+  group by texte
 )
 select
   (select count(*) from base)::int                                   as nb_avec_texte,
@@ -199,11 +198,12 @@ select
     select json_agg(json_build_object(
       'texte', t.texte,
       'titre', coalesce(d.data->'titres'->>'titrePrincipalCourt', d.data->'titres'->>'titrePrincipal'),
-      'amendements', (select count(*) from base b where b.texte = t.texte),
+      'amendements', tt.amendements,
       'identiques', t.identiques,
       'copies', t.copies
     ) order by t.copies desc)
     from top t
+    join totaux_top tt on tt.texte = t.texte
     left join assemblee.documents d on d.uid = t.texte
   ) as top_textes;
 `;
@@ -218,59 +218,70 @@ function buckets(row: Row, labels: string[]): Bucket[] {
   return labels.map((label, i) => ({ label, count: Number(row[`b${i + 1}`] ?? 0) }));
 }
 
-async function computeStats(): Promise<Stats> {
-  const [[l], [a], [i]] = await Promise.all([
-    query<Row>(SQL_LOIS),
-    query<Row>(SQL_AMENDEMENTS),
-    query<Row & { top_textes: TexteIdentiques[] | null }>(SQL_IDENTIQUES),
-  ]);
+async function computeLois(): Promise<LoiStats> {
+  const [l] = await longQuery<Row>(SQL_LOIS);
   return {
-    lois: {
-      nbLoisPromulguees: Number(l.nb_lois),
-      nbLoisAvecArticles: Number(l.nb_lois_avec_articles),
-      nbArticles: Number(l.nb_articles),
-      moyenneArticles: l.moyenne,
-      medianeArticles: l.mediane,
-      distribution: buckets(l, LOI_BUCKETS),
-    },
-    amendements: {
-      nbAmendementsTotal: Number(a.nb_total),
-      nbAmendementsSurArticle: Number(a.nb_sur_article),
-      nbArticlesAmendes: Number(a.nb_articles),
-      moyenneAmendements: a.moyenne,
-      medianeAmendements: a.mediane,
-      distribution: buckets(a, AMDT_BUCKETS),
-    },
-    identiques: {
-      nbAvecTexte: Number(i.nb_avec_texte),
-      nbFamilles: Number(i.nb_familles),
-      nbIdentiques: Number(i.nb_identiques),
-      nbCopies: Number(i.nb_copies),
-      plusGrosseFamille: Number(i.plus_grosse),
-      nbAmbigus: Number(i.nb_ambigus),
-      distribution: buckets(i, FAMILLE_BUCKETS),
-      topTextes: i.top_textes ?? [],
-    },
-    calculeLe: new Date(),
+    nbLoisPromulguees: Number(l.nb_lois),
+    nbLoisAvecArticles: Number(l.nb_lois_avec_articles),
+    nbArticles: Number(l.nb_articles),
+    moyenneArticles: l.moyenne,
+    medianeArticles: l.mediane,
+    distribution: buckets(l, LOI_BUCKETS),
   };
 }
 
-// Les requêtes parcourent de grosses tables JSON : on garde le résultat
-// en mémoire une heure plutôt que de tout recalculer à chaque visite.
+async function computeAmendements(): Promise<AmendementStats> {
+  const [a] = await longQuery<Row>(SQL_AMENDEMENTS);
+  return {
+    nbAmendementsTotal: Number(a.nb_total),
+    nbAmendementsSurArticle: Number(a.nb_sur_article),
+    nbArticlesAmendes: Number(a.nb_articles),
+    moyenneAmendements: a.moyenne,
+    medianeAmendements: a.mediane,
+    distribution: buckets(a, AMDT_BUCKETS),
+  };
+}
+
+async function computeIdentiques(): Promise<IdentiquesStats> {
+  const [i] = await longQuery<Row & { top_textes: TexteIdentiques[] | null }>(SQL_IDENTIQUES);
+  return {
+    nbAvecTexte: Number(i.nb_avec_texte),
+    nbFamilles: Number(i.nb_familles),
+    nbIdentiques: Number(i.nb_identiques),
+    nbCopies: Number(i.nb_copies),
+    plusGrosseFamille: Number(i.plus_grosse),
+    nbAmbigus: Number(i.nb_ambigus),
+    distribution: buckets(i, FAMILLE_BUCKETS),
+    topTextes: i.top_textes ?? [],
+  };
+}
+
+/*
+ * Chaque section a son propre cache d'une heure : les requêtes parcourent de
+ * grosses tables JSON, et l'échec de l'une ne doit pas bloquer les autres.
+ * Un échec n'est jamais mis en cache (la visite suivante réessaie).
+ */
 const CACHE_MS = 60 * 60 * 1000;
+type Cached<T> = { at: number; promise: Promise<Calcul<T>> };
+export type Calcul<T> = { data: T; calculeLe: Date };
+
 const globalForStats = globalThis as unknown as {
-  statsCache?: { at: number; promise: Promise<Stats> };
+  statsCache?: Map<string, Cached<unknown>>;
 };
 
-export function getStats(): Promise<Stats> {
-  const cached = globalForStats.statsCache;
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.promise;
+function cached<T>(key: string, compute: () => Promise<T>): Promise<Calcul<T>> {
+  const cache = (globalForStats.statsCache ??= new Map());
+  const hit = cache.get(key) as Cached<T> | undefined;
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.promise;
 
-  const promise = computeStats();
-  globalForStats.statsCache = { at: Date.now(), promise };
-  // En cas d'erreur, on n'enferme pas l'échec dans le cache.
+  const promise = compute().then((data) => ({ data, calculeLe: new Date() }));
+  cache.set(key, { at: Date.now(), promise });
   promise.catch(() => {
-    if (globalForStats.statsCache?.promise === promise) globalForStats.statsCache = undefined;
+    if (cache.get(key)?.promise === promise) cache.delete(key);
   });
   return promise;
 }
+
+export const getLoiStats = () => cached("lois", computeLois);
+export const getAmendementStats = () => cached("amendements", computeAmendements);
+export const getIdentiquesStats = () => cached("identiques", computeIdentiques);

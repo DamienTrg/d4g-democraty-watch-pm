@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { query } from "@/lib/db";
 
@@ -31,6 +32,12 @@ export default async function Home() {
           <p className="text-red-700 dark:text-red-400">✗ Échec : {status.message}</p>
         )}
       </section>
+      <Link
+        href="/statistiques"
+        className="self-start rounded-full bg-foreground px-5 py-2.5 text-sm font-medium text-background hover:opacity-90"
+      >
+        Voir les statistiques des textes de loi →
+      </Link>
     </main>
   );
 }

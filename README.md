@@ -50,3 +50,23 @@ npm run stats:reset
 | `DATABASE_LONG_QUERY_TIMEOUT_MS` | Délai max. des requêtes de statistiques (défaut : 300000 = 5 min) |
 
 Ne commitez jamais `.env.local` : il contient vos identifiants.
+
+## Page statique (GitHub Pages)
+
+Une version statique de la page de statistiques peut être publiée sur GitHub Pages.
+Elle ne se connecte pas à la base : elle affiche un instantané des chiffres.
+
+1. Générer la page (là où la base est accessible) :
+   ```bash
+   npm run static
+   ```
+   Cela crée `docs/index.html`, `docs/styles.css` et `docs/donnees.json` (les données brutes).
+2. Publier :
+   ```bash
+   git add docs && git commit -m "Mettre à jour la page statique" && git push
+   ```
+3. Une seule fois : sur GitHub, **Settings → Pages → Build and deployment** →
+   Source « Deploy from a branch », branche `main`, dossier `/docs`.
+
+Pour mettre à jour les chiffres plus tard, refaire les étapes 1 et 2.
+La page utilise le cache de 24 h : `npm run stats:reset` avant pour forcer un recalcul.

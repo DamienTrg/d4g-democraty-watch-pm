@@ -26,6 +26,8 @@ L'endpoint `GET /api/health` renvoie le même diagnostic en JSON.
 - **Lois et articles** : schéma `legifrance` — textes principaux de `dossier_legislatif`, articles JORF de `article`.
 - **Amendements par article** : schéma `assemblee` — table `amendements`, article visé lu dans `pointeurFragmentTexte.division`.
   Seuls les articles amendés au moins une fois sont connus ; les articles additionnels, titres et chapitres sont exclus.
+- **Amendements identiques** : même texte, même article, même dispositif normalisé (`corps.contenuAuteur.dispositif`).
+  L'alinéa visé n'étant pas stocké, les dispositifs génériques (« Cet alinéa est supprimé ») sont écartés : le chiffre est un minimum.
 
 ## Variables d'environnement
 

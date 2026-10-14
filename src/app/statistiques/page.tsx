@@ -40,7 +40,9 @@ export default async function StatistiquesPage() {
     );
   }
 
-  const { lois, amendements } = stats;
+  const { lois, amendements, identiques } = stats;
+  const pct = (part: number, total: number) =>
+    total ? `${dec.format((part / total) * 100)} %` : "—";
   const exclus = amendements.nbAmendementsTotal - amendements.nbAmendementsSurArticle;
 
   return (
@@ -135,9 +137,89 @@ export default async function StatistiquesPage() {
               forcément à celle de la loi promulguée.
             </li>
             <li>
-              {int.format(exclus)} amendements sur {int.format(amendements.nbAmendementsTotal)} ne
-              visent pas un article existant (articles additionnels, titres, chapitres…) et ne sont pas
-              comptés ici.
+              {int.format(exclus)} {exclus > 1 ? "amendements" : "amendement"} sur{" "}
+              {int.format(amendements.nbAmendementsTotal)} ne visent pas un article existant
+              (articles additionnels, titres, chapitres…) et ne sont pas comptés ici.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      {/* Amendements identiques */}
+      <section className="flex flex-col gap-6">
+        <div>
+          <h2 className="text-xl font-semibold">Amendements identiques</h2>
+          <p className="mt-1 text-sm text-muted">
+            Source : Assemblée nationale. Deux amendements sont identiques s&apos;ils portent sur le
+            même texte et le même article, avec le même dispositif (mise en forme, ponctuation,
+            accents et majuscules ignorés).
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Tile
+            label="Amendements identiques"
+            value={int.format(identiques.nbIdentiques)}
+            hint={`${pct(identiques.nbIdentiques, identiques.nbAvecTexte)} des amendements rédigés`}
+          />
+          <Tile
+            label="Copies en surnombre"
+            value={int.format(identiques.nbCopies)}
+            hint={`en gardant un exemplaire par famille (${pct(identiques.nbCopies, identiques.nbAvecTexte)})`}
+          />
+          <Tile
+            label="Plus grosse famille"
+            value={int.format(identiques.plusGrosseFamille)}
+            hint={`amendements identiques · ${int.format(identiques.nbFamilles)} familles au total`}
+          />
+        </div>
+        <Histogram
+          title="Répartition des familles selon leur nombre d'exemplaires"
+          buckets={identiques.distribution}
+          unitLabel="exemplaires"
+          itemLabel="familles"
+        />
+        {identiques.topTextes.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium">Textes les plus concernés</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm tabular-nums">
+                <thead className="text-muted">
+                  <tr>
+                    <th className="py-2 font-normal">Texte</th>
+                    <th className="py-2 pl-2 text-right font-normal">Amend.</th>
+                    <th className="py-2 pl-2 text-right font-normal">Identiques</th>
+                    <th className="py-2 pl-2 text-right font-normal">Part</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {identiques.topTextes.map((t) => (
+                    <tr key={t.texte} className="border-t border-line">
+                      <td className="py-2 pr-4">
+                        <span className="block">{t.titre ?? t.texte}</span>
+                        {t.titre && <span className="text-xs text-muted">{t.texte}</span>}
+                      </td>
+                      <td className="py-2 text-right">{int.format(t.amendements)}</td>
+                      <td className="py-2 text-right">{int.format(t.identiques)}</td>
+                      <td className="py-2 text-right">{pct(t.identiques, t.amendements)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        <div className="rounded-lg border border-line p-4 text-sm leading-6 text-muted">
+          <p className="font-medium text-foreground">Méthode</p>
+          <ul className="mt-2 list-disc pl-5">
+            <li>
+              Les données ne précisent pas l&apos;alinéa visé. Un dispositif générique comme
+              « Cet alinéa est supprimé » peut donc viser des alinéas différents : ces cas (
+              {int.format(identiques.nbAmbigus)} amendements) sont écartés plutôt que comptés comme
+              identiques. Le chiffre affiché est donc un minimum.
+            </li>
+            <li>
+              Seuls les {int.format(identiques.nbAvecTexte)} amendements dont le texte est publié
+              sont analysés.
             </li>
           </ul>
         </div>

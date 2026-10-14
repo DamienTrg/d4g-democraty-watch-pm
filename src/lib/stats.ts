@@ -32,9 +32,29 @@ export type AmendementStats = {
   distribution: Bucket[];
 };
 
+export type TexteIdentiques = {
+  texte: string;
+  titre: string | null;
+  amendements: number;
+  identiques: number;
+  copies: number;
+};
+
+export type IdentiquesStats = {
+  nbAvecTexte: number;
+  nbFamilles: number;
+  nbIdentiques: number;
+  nbCopies: number;
+  plusGrosseFamille: number;
+  nbAmbigus: number;
+  distribution: Bucket[];
+  topTextes: TexteIdentiques[];
+};
+
 export type Stats = {
   lois: LoiStats;
   amendements: AmendementStats;
+  identiques: IdentiquesStats;
   calculeLe: Date;
 };
 
@@ -83,7 +103,11 @@ with cibles as (
       data->'pointeurFragmentTexte'->'division'->>'titre'
     ) as article,
     data->'pointeurFragmentTexte'->'division'->>'type' as type_division,
-    coalesce(data->'pointeurFragmentTexte'->'division'->>'avant_A_Apres', 'A') as position
+    coalesce(
+      data->'pointeurFragmentTexte'->'division'->>'avantAApres',
+      data->'pointeurFragmentTexte'->'division'->>'avant_A_Apres',
+      'A'
+    ) as position
   from assemblee.amendements
 ),
 par_article as (
@@ -109,17 +133,97 @@ select
 from par_article;
 `;
 
+/*
+ * Amendements identiques = même texte en discussion, même article visé,
+ * même dispositif une fois normalisé (balises HTML, entités, ponctuation,
+ * accents et majuscules ignorés).
+ *
+ * L'alinéa visé n'est pas stocké dans les données : un dispositif générique
+ * comme « Cet alinéa est supprimé » peut viser des alinéas différents.
+ * Ces familles « ambiguës » (mention d'alinéa sans aucun numéro) sont
+ * comptées à part et exclues des doublons.
+ */
+const SQL_IDENTIQUES = `
+with brut as (
+  select
+    data->>'texteLegislatifRef' as texte,
+    data->'pointeurFragmentTexte'->'division'->>'titre' as article,
+    regexp_replace(
+      regexp_replace(data->'corps'->'contenuAuteur'->>'dispositif', '<[^>]+>', ' ', 'g'),
+      '&#?[a-z0-9]+;', '', 'gi'
+    ) as dispositif
+  from assemblee.amendements
+  where data->'corps'->'contenuAuteur'->>'dispositif' is not null
+),
+base as (
+  select
+    texte,
+    coalesce(article, '') as article,
+    md5(regexp_replace(lower(dispositif), '[^a-z0-9]+', '', 'g')) as empreinte,
+    regexp_replace(lower(dispositif), '[^a-z0-9]+', '', 'g') = '' as vide,
+    (dispositif ~* '(cet\\s+alin|l\\W?alin\\S*\\s+(de\\s+cet\\s+article\\s+)?est\\s+supprim)'
+      and dispositif !~ '[0-9]') as ambigu
+  from brut
+  where texte is not null
+),
+familles as (
+  select texte, article, empreinte, bool_or(ambigu) as ambigu, count(*)::int as nb
+  from base
+  where not vide
+  group by texte, article, empreinte
+),
+doublons as (
+  select * from familles where nb > 1 and not ambigu
+),
+top as (
+  select texte, count(*)::int as familles, sum(nb)::int as identiques, sum(nb - 1)::int as copies
+  from doublons
+  group by texte
+  order by copies desc
+  limit 10
+)
+select
+  (select count(*) from base)::int                                   as nb_avec_texte,
+  (select count(*) from doublons)::int                               as nb_familles,
+  (select coalesce(sum(nb), 0) from doublons)::int                   as nb_identiques,
+  (select coalesce(sum(nb - 1), 0) from doublons)::int               as nb_copies,
+  (select coalesce(max(nb), 0) from doublons)::int                   as plus_grosse,
+  (select coalesce(sum(nb), 0) from familles where nb > 1 and ambigu)::int as nb_ambigus,
+  (select count(*) from doublons where nb = 2)::int                  as b1,
+  (select count(*) from doublons where nb between 3 and 5)::int      as b2,
+  (select count(*) from doublons where nb between 6 and 10)::int     as b3,
+  (select count(*) from doublons where nb between 11 and 50)::int    as b4,
+  (select count(*) from doublons where nb between 51 and 100)::int   as b5,
+  (select count(*) from doublons where nb > 100)::int                as b6,
+  (
+    select json_agg(json_build_object(
+      'texte', t.texte,
+      'titre', coalesce(d.data->'titres'->>'titrePrincipalCourt', d.data->'titres'->>'titrePrincipal'),
+      'amendements', (select count(*) from base b where b.texte = t.texte),
+      'identiques', t.identiques,
+      'copies', t.copies
+    ) order by t.copies desc)
+    from top t
+    left join assemblee.documents d on d.uid = t.texte
+  ) as top_textes;
+`;
+
 type Row = Record<string, number | null>;
 
 const LOI_BUCKETS = ["1", "2–5", "6–10", "11–20", "21–50", "51–100", "> 100"];
 const AMDT_BUCKETS = ["1", "2–5", "6–10", "11–25", "26–50", "51–100", "> 100"];
+const FAMILLE_BUCKETS = ["2", "3–5", "6–10", "11–50", "51–100", "> 100"];
 
 function buckets(row: Row, labels: string[]): Bucket[] {
   return labels.map((label, i) => ({ label, count: Number(row[`b${i + 1}`] ?? 0) }));
 }
 
 async function computeStats(): Promise<Stats> {
-  const [[l], [a]] = await Promise.all([query<Row>(SQL_LOIS), query<Row>(SQL_AMENDEMENTS)]);
+  const [[l], [a], [i]] = await Promise.all([
+    query<Row>(SQL_LOIS),
+    query<Row>(SQL_AMENDEMENTS),
+    query<Row & { top_textes: TexteIdentiques[] | null }>(SQL_IDENTIQUES),
+  ]);
   return {
     lois: {
       nbLoisPromulguees: Number(l.nb_lois),
@@ -136,6 +240,16 @@ async function computeStats(): Promise<Stats> {
       moyenneAmendements: a.moyenne,
       medianeAmendements: a.mediane,
       distribution: buckets(a, AMDT_BUCKETS),
+    },
+    identiques: {
+      nbAvecTexte: Number(i.nb_avec_texte),
+      nbFamilles: Number(i.nb_familles),
+      nbIdentiques: Number(i.nb_identiques),
+      nbCopies: Number(i.nb_copies),
+      plusGrosseFamille: Number(i.plus_grosse),
+      nbAmbigus: Number(i.nb_ambigus),
+      distribution: buckets(i, FAMILLE_BUCKETS),
+      topTextes: i.top_textes ?? [],
     },
     calculeLe: new Date(),
   };

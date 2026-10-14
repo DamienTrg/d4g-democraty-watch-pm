@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "stats:reset": "node -e \"require('fs').rmSync('.cache/stats',{recursive:true,force:true});console.log('Cache des statistiques vidé.')\""
   },
   "dependencies": {
     "next": "16.4.0",

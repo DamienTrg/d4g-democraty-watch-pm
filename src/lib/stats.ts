@@ -1,4 +1,5 @@
 import "server-only";
+import { cachedOnDisk, type Calcul } from "@/lib/cache";
 import { longQuery } from "@/lib/db";
 
 /*
@@ -257,31 +258,16 @@ async function computeIdentiques(): Promise<IdentiquesStats> {
 }
 
 /*
- * Chaque section a son propre cache d'une heure : les requêtes parcourent de
- * grosses tables JSON, et l'échec de l'une ne doit pas bloquer les autres.
- * Un échec n'est jamais mis en cache (la visite suivante réessaie).
+ * Chaque section a son propre cache (24 h par défaut, sur disque) : les
+ * requêtes parcourent de grosses tables JSON, et l'échec de l'une ne doit pas
+ * bloquer les autres. Modifier une requête SQL invalide automatiquement son cache.
  */
-const CACHE_MS = 60 * 60 * 1000;
-type Cached<T> = { at: number; promise: Promise<Calcul<T>> };
-export type Calcul<T> = { data: T; calculeLe: Date };
+const CACHE_MS = Number(process.env.STATS_CACHE_HOURS ?? 24) * 60 * 60 * 1000;
 
-const globalForStats = globalThis as unknown as {
-  statsCache?: Map<string, Cached<unknown>>;
-};
+export type { Calcul };
 
-function cached<T>(key: string, compute: () => Promise<T>): Promise<Calcul<T>> {
-  const cache = (globalForStats.statsCache ??= new Map());
-  const hit = cache.get(key) as Cached<T> | undefined;
-  if (hit && Date.now() - hit.at < CACHE_MS) return hit.promise;
-
-  const promise = compute().then((data) => ({ data, calculeLe: new Date() }));
-  cache.set(key, { at: Date.now(), promise });
-  promise.catch(() => {
-    if (cache.get(key)?.promise === promise) cache.delete(key);
-  });
-  return promise;
-}
-
-export const getLoiStats = () => cached("lois", computeLois);
-export const getAmendementStats = () => cached("amendements", computeAmendements);
-export const getIdentiquesStats = () => cached("identiques", computeIdentiques);
+export const getLoiStats = () => cachedOnDisk("lois", SQL_LOIS, CACHE_MS, computeLois);
+export const getAmendementStats = () =>
+  cachedOnDisk("amendements", SQL_AMENDEMENTS, CACHE_MS, computeAmendements);
+export const getIdentiquesStats = () =>
+  cachedOnDisk("identiques", SQL_IDENTIQUES, CACHE_MS, computeIdentiques);

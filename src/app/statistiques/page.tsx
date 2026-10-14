@@ -123,7 +123,7 @@ export default function StatistiquesPage() {
           Statistiques des textes de loi
         </h1>
         <p className="text-sm text-muted">
-          Chaque section est recalculée au plus une fois par heure.
+          Chaque section est recalculée au plus une fois par jour.
         </p>
       </header>
 

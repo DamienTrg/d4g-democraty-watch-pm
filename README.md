@@ -19,7 +19,18 @@ L'endpoint `GET /api/health` renvoie le même diagnostic en JSON.
 - `src/app/api/health/route.ts` — vérification de la connexion
 - `src/app/page.tsx` — page d'accueil
 - `src/app/statistiques/` — page de statistiques (lois, articles, amendements)
-- `src/lib/stats.ts` — requêtes SQL des statistiques, mises en cache 1 h
+- `src/lib/stats.ts` — requêtes SQL des statistiques
+- `src/lib/cache.ts` — cache sur disque (`.cache/stats/`), 24 h par défaut
+
+## Cache des statistiques
+
+Les statistiques sont calculées au plus une fois par 24 h et enregistrées dans `.cache/stats/`
+(conservé entre deux redémarrages). Passé ce délai, les anciens chiffres restent affichés
+pendant le recalcul en arrière-plan. Pour forcer un recalcul immédiat :
+
+```bash
+npm run stats:reset
+```
 
 ## Sources des statistiques
 
@@ -35,6 +46,7 @@ L'endpoint `GET /api/health` renvoie le même diagnostic en JSON.
 |---|---|
 | `DATABASE_URL` | Chaîne de connexion `postgresql://user:password@host:5432/db` |
 | `DATABASE_SSL` | `true` par défaut ; `false` pour une base locale sans SSL |
+| `STATS_CACHE_HOURS` | Durée de cache des statistiques, en heures (défaut : 24) |
 | `DATABASE_LONG_QUERY_TIMEOUT_MS` | Délai max. des requêtes de statistiques (défaut : 300000 = 5 min) |
 
 Ne commitez jamais `.env.local` : il contient vos identifiants.

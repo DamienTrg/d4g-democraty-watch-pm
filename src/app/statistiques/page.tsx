@@ -24,14 +24,36 @@ function Tile({
   label,
   value,
   hint,
+  info,
 }: {
   label: string;
   value: string;
   hint?: string;
+  /** Explication affichée au survol (ou au focus clavier) d'un petit « ? » */
+  info?: string;
 }) {
   return (
     <div className="flex flex-col gap-1 rounded-lg border border-line bg-surface-1 p-4">
-      <span className="text-sm text-muted">{label}</span>
+      <span className="flex items-center gap-1.5 text-sm text-muted">
+        {label}
+        {info && (
+          <span className="group relative inline-flex">
+            <span
+              tabIndex={0}
+              aria-label={info}
+              className="inline-flex h-4 w-4 cursor-help items-center justify-center rounded-full border border-line text-[10px] leading-none outline-none focus-visible:ring-2 focus-visible:ring-series-1"
+            >
+              ?
+            </span>
+            <span
+              role="tooltip"
+              className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden w-56 -translate-x-1/2 rounded-md border border-line bg-background px-2.5 py-1.5 text-xs leading-snug text-foreground shadow-sm group-focus-within:block group-hover:block"
+            >
+              {info}
+            </span>
+          </span>
+        )}
+      </span>
       <span className="text-3xl font-semibold tracking-tight">{value}</span>
       {hint && <span className="text-xs text-muted">{hint}</span>}
     </div>
@@ -259,24 +281,27 @@ export default function StatistiquesPage() {
                 <Tile
                   label="Amendements identiques"
                   value={int.format(identiques.nbIdentiques)}
-                  hint={`${pct(identiques.nbIdentiques, identiques.nbAvecTexte)} des amendements rédigés`}
+                  hint={`${pct(identiques.nbIdentiques, identiques.nbAvecTexte)} des amendements rédigés · ${int.format(identiques.nbFamilles)} groupes`}
+                  info="Amendements dont au moins un autre exemplaire identique a été déposé sur le même article. Ils sont réunis en groupes d'amendements identiques."
                 />
                 <Tile
-                  label="Copies en surnombre"
+                  label="Doublons"
                   value={int.format(identiques.nbCopies)}
-                  hint={`en gardant un exemplaire par famille (${pct(identiques.nbCopies, identiques.nbAvecTexte)})`}
+                  hint={`${pct(identiques.nbCopies, identiques.nbAvecTexte)} des amendements rédigés`}
+                  info="Nombre d'amendements en trop si l'on n'en gardait qu'un par groupe. Exemple : 150 amendements identiques = 1 groupe, 149 doublons."
                 />
                 <Tile
-                  label="Plus grosse famille"
+                  label="Plus grand groupe"
                   value={int.format(identiques.plusGrosseFamille)}
-                  hint={`amendements identiques · ${int.format(identiques.nbFamilles)} familles au total`}
+                  hint="amendements identiques sur un même article"
+                  info="Le même amendement déposé le plus grand nombre de fois sur un même article d'un même texte."
                 />
               </div>
               <Histogram
-                title="Répartition des familles selon leur nombre d'exemplaires"
+                title="Répartition des groupes d'amendements identiques selon leur taille"
                 buckets={identiques.distribution}
-                unitLabel="exemplaires"
-                itemLabel="familles"
+                unitLabel="amendements"
+                itemLabel="groupes"
               />
               {identiques.topTextes.length > 0 && (
                 <div className="flex flex-col gap-2">

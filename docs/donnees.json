@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-10-14T16:44:57.832Z",
+  "lois": {
+    "calculeLe": "2026-10-14T16:40:49.897Z",
+    "data": {
+      "nbLoisPromulguees": 2372,
+      "nbLoisAvecArticles": 2372,
+      "nbArticles": 71316,
+      "moyenneArticles": 30.06576728499157,
+      "medianeArticles": 9,
+      "distribution": [
+        {
+          "label": "1",
+          "count": 137
+        },
+        {
+          "label": "2–5",
+          "count": 706
+        },
+        {
+          "label": "6–10",
+          "count": 488
+        },
+        {
+          "label": "11–20",
+          "count": 392
+        },
+        {
+          "label": "21–50",
+          "count": 348
+        },
+        {
+          "label": "51–100",
+          "count": 153
+        },
+        {
+          "label": "> 100",
+          "count": 148
+        }
+      ]
+    }
+  },
+  "amendements": {
+    "calculeLe": "2026-10-14T16:40:48.055Z",
+    "data": {
+      "nbAmendementsTotal": 610717,
+      "nbAmendementsSurArticle": 368973,
+      "nbArticlesAmendes": 19729,
+      "moyenneAmendements": 18.702062953013332,
+      "medianeAmendements": 5,
+      "distribution": [
+        {
+          "label": "1",
+          "count": 3598
+        },
+        {
+          "label": "2–5",
+          "count": 7108
+        },
+        {
+          "label": "6–10",
+          "count": 3192
+        },
+        {
+          "label": "11–25",
+          "count": 3155
+        },
+        {
+          "label": "26–50",
+          "count": 1453
+        },
+        {
+          "label": "51–100",
+          "count": 729
+        },
+        {
+          "label": "> 100",
+          "count": 494
+        }
+      ]
+    }
+  },
+  "identiques": {
+    "calculeLe": "2026-10-14T16:42:04.143Z",
+    "data": {
+      "nbAvecTexte": 474190,
+      "nbFamilles": 55697,
+      "nbIdentiques": 236720,
+      "nbCopies": 181023,
+      "plusGrosseFamille": 242,
+      "nbAmbigus": 2155,
+      "distribution": [
+        {
+          "label": "2",
+          "count": 31303
+        },
+        {
+          "label": "3–5",
+          "count": 15440
+        },
+        {
+          "label": "6–10",
+          "count": 5016
+        },
+        {
+          "label": "11–50",
+          "count": 3821
+        },
+        {
+          "label": "51–100",
+          "count": 100
+        },
+        {
+          "label": "> 100",
+          "count": 17
+        }
+      ],
+      "topTextes": [
+        {
+          "texte": "PRJLANR5L15B2623",
+          "titre": "Institution d'un système universel de retraite",
+          "amendements": 55438,
+          "identiques": 51210,
+          "copies": 48301
+        },
+        {
+          "texte": "PRJLANR5L16B0760",
+          "titre": "PLFRSS pour 2023",
+          "amendements": 22461,
+          "identiques": 18694,
+          "copies": 16217
+        },
+        {
+          "texte": "PRJLANR5L16B1680",
+          "titre": "PLF pour 224",
+          "amendements": 9309,
+          "identiques": 4836,
+          "copies": 3370
+        },
+        {
+          "texte": "PRJLANR5L15B2272",
+          "titre": "PLF pour 2020",
+          "amendements": 6518,
+          "identiques": 3643,
+          "copies": 2697
+        },
+        {
+          "texte": "PIONANR5L15BTC4042",
+          "titre": "fin de vie",
+          "amendements": 3726,
+          "identiques": 3117,
+          "copies": 2461
+        },
+        {
+          "texte": "PRJLANR5L15B1255",
+          "titre": "PLF pour 2019",
+          "amendements": 5685,
+          "identiques": 3138,
+          "copies": 2339
+        },
+        {
+          "texte": "PRJLANR5L15B3360",
+          "titre": "PLF pour 2021",
+          "amendements": 5547,
+          "identiques": 3229,
+          "copies": 2328
+        },
+        {
+          "texte": "PRJLANR5L17B1906",
+          "titre": "Projet de loi de finances pour 2026",
+          "amendements": 6115,
+          "identiques": 3152,
+          "copies": 2239
+        },
+        {
+          "texte": "PRJLANR5L15BTC3995",
+          "titre": "Lutte contre le dérèglement climatique",
+          "amendements": 5629,
+          "identiques": 2797,
+          "copies": 2141
+        },
+        {
+          "texte": "PRJLANR5L17B0324",
+          "titre": "PLF pour 2025",
+          "amendements": 6113,
+          "identiques": 2953,
+          "copies": 2024
+        }
+      ]
+    }
+  }
+}

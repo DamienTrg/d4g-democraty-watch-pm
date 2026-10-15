@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-15T09:20:56.239Z",
+  "generatedAt": "2026-10-15T12:58:24.489Z",
   "lois": {
     "calculeLe": "2026-10-14T23:58:08.564Z",
     "data": {
@@ -188,6 +188,151 @@
           "amendements": 6113,
           "identiques": 2953,
           "copies": 2024
+        }
+      ]
+    }
+  },
+  "commissions": {
+    "calculeLe": "2026-10-15T12:38:01.245Z",
+    "data": {
+      "nbTextes": 9999,
+      "nbSansCommission": 1954,
+      "commissions": [
+        {
+          "commission": "Commission des lois constitutionnelles, de la législation et de l'administration générale de la République",
+          "textes": 3005
+        },
+        {
+          "commission": "Commission des affaires sociales",
+          "textes": 1727
+        },
+        {
+          "commission": "Commission des affaires économiques",
+          "textes": 1056
+        },
+        {
+          "commission": "Commission des finances, de l'économie générale et du contrôle budgétaire",
+          "textes": 822
+        },
+        {
+          "commission": "Commission des affaires culturelles et de l'éducation",
+          "textes": 645
+        },
+        {
+          "commission": "Commission du développement durable et de l'aménagement du territoire",
+          "textes": 562
+        },
+        {
+          "commission": "Commission de la défense nationale et des forces armées",
+          "textes": 155
+        },
+        {
+          "commission": "Commission des affaires étrangères",
+          "textes": 41
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner la proposition de loi organique relative à la modernisation de la gestion des finances publiques et la proposition de loi portant diverses dispositions relatives au Haut Conseil des finances publiques et à l’information du Parlement sur les finances publiques ainsi que la proposition de loi organique et la proposition de loi relatives aux lois de financement de la sécurité sociale",
+          "textes": 4
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner la proposition de loi apportant une réponse intégrale au phénomène des violences sexuelles et sexistes contre les femmes et les enfants et la proposition de loi organique visant à adapter l'autorité judiciaire à la lutte contre les violences sexuelles et intrafamiliales",
+          "textes": 2
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi instituant un système universel de retraite et le projet de loi organique relatif au système universel de retraite",
+          "textes": 2
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi organique relatif à la dette sociale et à l’autonomie et le projet de loi relatif à la dette sociale et à l’autonomie",
+          "textes": 2
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner la proposition de loi organique portant réforme du financement de l’audiovisuel public",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner la proposition de loi organique relative à l’extension des prélèvements sur les recettes de l’État au profit des organismes du secteur audiovisuel public",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner le projet de loi, adopté par le Sénat, en faveur de l'activité professionnelle indépendante",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi confortant le respect des principes de la République",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi d’accélération et de simplification de l’action publique",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi Egalité et citoyenneté",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi habilitant le Gouvernement à prendre par ordonnances les mesures de préparation au retrait du Royaume-Uni de l'Union européenne",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi organique relatif à la programmation et à la gouvernance des finances publiques",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner le projet de loi portant diverses dispositions urgentes pour faire face aux conséquences de l’épidémie de covid-19",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi portant lutte contre le dérèglement climatique et renforcement de la résilience face à ses effets",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi pour la croissance, l'activité et l'égalité des chances économiques",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi pour un État au service d'une société de confiance",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi relatif à la bioéthique",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi relatif à la croissance et la transformation des entreprises",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner le projet de loi relatif à la protection des enfants",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d'examiner le projet de loi relatif à la résilience des infrastructures critiques et au renforcement de la cybersécurité",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner le projet de loi relatif à l'industrie verte",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale chargée d’examiner le projet de loi visant à sécuriser et réguler l’espace numérique",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale pour l'examen de la proposition de loi renforçant la lutte contre le système prostitutionnel",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale pour l’examen du projet de loi relatif à l’accompagnement des malades et de la fin de vie",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale pour l'examen du projet de loi relatif à la simplification de la vie des entreprises",
+          "textes": 1
+        },
+        {
+          "commission": "Commission spéciale pour l'examen du projet de loi relatif à la transition énergétique pour la croissance verte",
+          "textes": 1
         }
       ]
     }

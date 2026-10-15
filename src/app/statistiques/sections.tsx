@@ -184,6 +184,57 @@ export function AmendementsSection({
   );
 }
 
+function ComparaisonStricte({ identiques }: { identiques: IdentiquesStats }) {
+  const lignes: [string, number, number][] = [
+    [
+      "Amendements identiques",
+      identiques.nbIdentiquesStricts ?? 0,
+      identiques.nbIdentiques,
+    ],
+    ["Doublons", identiques.nbCopiesStrictes ?? 0, identiques.nbCopies],
+    ["Groupes", identiques.nbGroupesStricts ?? 0, identiques.nbFamilles],
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-sm font-medium">
+        Copier-coller exact ou simple variante ?
+      </h3>
+      <p className="text-sm text-muted">
+        <strong className="font-semibold text-foreground">
+          {pct(identiques.nbIdentiquesStricts ?? 0, identiques.nbIdentiques)}
+        </strong>{" "}
+        des amendements identiques le sont au caractère près. Les autres ne
+        diffèrent que par la mise en forme (balises, espaces, apostrophes,
+        ponctuation, majuscules).
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm tabular-nums">
+          <thead className="text-muted">
+            <tr>
+              <th className="py-2 font-normal"></th>
+              <th className="py-2 pl-2 text-right font-normal">
+                Texte brut identique
+              </th>
+              <th className="py-2 pl-2 text-right font-normal">
+                Après normalisation
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {lignes.map(([label, strict, normalise]) => (
+              <tr key={label} className="border-t border-line">
+                <td className="py-2 pr-4">{label}</td>
+                <td className="py-2 text-right">{int.format(strict)}</td>
+                <td className="py-2 text-right">{int.format(normalise)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export function IdentiquesSection({
   identiques,
 }: {
@@ -196,8 +247,9 @@ export function IdentiquesSection({
         <p className="mt-1 text-sm text-muted">
           Source : Assemblée nationale. Deux amendements sont identiques
           s&apos;ils portent sur le même texte et le même article, avec le même
-          dispositif (mise en forme, ponctuation, accents et majuscules
-          ignorés).
+          dispositif. Sauf mention contraire, la comparaison ignore la mise en
+          forme, les espaces, la ponctuation et les majuscules (les accents
+          comptent).
         </p>
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -220,6 +272,9 @@ export function IdentiquesSection({
           info="Le même amendement déposé le plus grand nombre de fois sur un même article d'un même texte."
         />
       </div>
+      {identiques.nbIdentiquesStricts != null && (
+        <ComparaisonStricte identiques={identiques} />
+      )}
       <Histogram
         title="Répartition des groupes d'amendements identiques selon leur taille"
         buckets={identiques.distribution}
@@ -277,8 +332,14 @@ export function IdentiquesSection({
             chiffre affiché est donc un minimum.
           </li>
           <li>
-            Seuls les {int.format(identiques.nbAvecTexte)} amendements dont le
-            texte est publié sont analysés.
+            Normalisation : balises HTML retirées, entités décodées («
+            &amp;#233; » → « é »), espaces, ponctuation et majuscules ignorés.
+            Les accents sont conservés, pour ne pas confondre « ou » et « où ».
+          </li>
+          <li>
+            Seul le dispositif est comparé, pas l&apos;exposé sommaire. Seuls
+            les {int.format(identiques.nbAvecTexte)} amendements dont le texte
+            est publié sont analysés.
           </li>
         </ul>
       </div>

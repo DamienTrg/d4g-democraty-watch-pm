@@ -48,6 +48,10 @@ export type IdentiquesStats = {
   nbCopies: number;
   plusGrosseFamille: number;
   nbAmbigus: number;
+  /** Même chose, au caractère près (texte brut). Absent des anciens instantanés. */
+  nbGroupesStricts?: number;
+  nbIdentiquesStricts?: number;
+  nbCopiesStrictes?: number;
   distribution: Bucket[];
   topTextes: TexteIdentiques[];
 };
@@ -128,43 +132,116 @@ from par_article;
 `;
 
 /*
- * Amendements identiques = même texte en discussion, même article visé,
- * même dispositif une fois normalisé (balises HTML, entités, ponctuation,
- * accents et majuscules ignorés).
+ * Entités HTML présentes dans les dispositifs (ex. « alin&#233;a ») :
+ * on les décode pour que « é » et « &#233; » donnent le même texte.
+ * Les entités restantes, plus rares, sont ensuite supprimées.
+ */
+const ENTITES: [string[], string][] = [
+  [["&#233;", "&eacute;"], "é"],
+  [["&#232;", "&egrave;"], "è"],
+  [["&#234;", "&ecirc;"], "ê"],
+  [["&#235;", "&euml;"], "ë"],
+  [["&#224;", "&agrave;"], "à"],
+  [["&#226;", "&acirc;"], "â"],
+  [["&#228;", "&auml;"], "ä"],
+  [["&#231;", "&ccedil;"], "ç"],
+  [["&#238;", "&icirc;"], "î"],
+  [["&#239;", "&iuml;"], "ï"],
+  [["&#244;", "&ocirc;"], "ô"],
+  [["&#246;", "&ouml;"], "ö"],
+  [["&#249;", "&ugrave;"], "ù"],
+  [["&#251;", "&ucirc;"], "û"],
+  [["&#252;", "&uuml;"], "ü"],
+  [["&#255;", "&yuml;"], "ÿ"],
+  [["&#339;", "&oelig;"], "œ"],
+  [["&#230;", "&aelig;"], "æ"],
+  [["&#201;", "&Eacute;"], "É"],
+  [["&#200;", "&Egrave;"], "È"],
+  [["&#202;", "&Ecirc;"], "Ê"],
+  [["&#203;", "&Euml;"], "Ë"],
+  [["&#192;", "&Agrave;"], "À"],
+  [["&#194;", "&Acirc;"], "Â"],
+  [["&#199;", "&Ccedil;"], "Ç"],
+  [["&#206;", "&Icirc;"], "Î"],
+  [["&#207;", "&Iuml;"], "Ï"],
+  [["&#212;", "&Ocirc;"], "Ô"],
+  [["&#217;", "&Ugrave;"], "Ù"],
+  [["&#219;", "&Ucirc;"], "Û"],
+  [["&#220;", "&Uuml;"], "Ü"],
+  [["&#338;", "&OElig;"], "Œ"],
+  [["&#198;", "&AElig;"], "Æ"],
+  [["&#176;", "&deg;"], "°"],
+  // Espaces et apostrophes : utiles pour repérer « cet alinéa », « l’alinéa ».
+  [["&#160;", "&nbsp;", "&#8239;", "&#8201;"], " "],
+  [["&#8217;", "&rsquo;", "&#39;", "&#039;", "&apos;"], "'"],
+];
+
+/** Expression SQL : texte brut d'un dispositif (sans balises, entités décodées). */
+function texteDecode(expr: string): string {
+  let e = `regexp_replace(${expr}, '<[^>]+>', ' ', 'g')`;
+  for (const [alias, ch] of ENTITES) {
+    for (const a of alias)
+      e = `replace(${e}, '${a}', '${ch.replace(/'/g, "''")}')`;
+  }
+  return `regexp_replace(${e}, '&#?[a-z0-9]+;', '', 'gi')`;
+}
+
+/*
+ * Amendements identiques = même texte en discussion, même article visé, même
+ * dispositif. Deux niveaux :
+ *  - strict : dispositif identique au caractère près (texte brut tel que stocké) ;
+ *  - normalisé : balises HTML, entités, espaces, ponctuation et majuscules
+ *    ignorés. Les accents sont conservés (« ou » ≠ « où »).
  *
  * L'alinéa visé n'est pas stocké dans les données : un dispositif générique
  * comme « Cet alinéa est supprimé » peut viser des alinéas différents.
- * Ces familles « ambiguës » (mention d'alinéa sans aucun numéro) sont
- * comptées à part et exclues des doublons.
+ * Ces groupes « ambigus » (mention d'alinéa sans aucun numéro) sont
+ * comptés à part et exclus des doublons, aux deux niveaux.
  */
 const SQL_IDENTIQUES = `
 with brut as (
   select
     data->>'texteLegislatifRef' as texte,
-    data->'pointeurFragmentTexte'->'division'->>'titre' as article,
-    regexp_replace(
-      regexp_replace(data->'corps'->'contenuAuteur'->>'dispositif', '<[^>]+>', ' ', 'g'),
-      '&#?[a-z0-9]+;', '', 'gi'
-    ) as dispositif
+    coalesce(data->'pointeurFragmentTexte'->'division'->>'titre', '') as article,
+    data->'corps'->'contenuAuteur'->>'dispositif' as dispositif
   from assemblee.amendements
   where data->'corps'->'contenuAuteur'->>'dispositif' is not null
+    and data->>'texteLegislatifRef' is not null
+),
+decode as (
+  select texte, article, dispositif, ${texteDecode("dispositif")} as txt
+  from brut
+),
+norm as (
+  select texte, article, dispositif, txt,
+         regexp_replace(lower(txt), '[^[:alnum:]]+', '', 'g') as cle
+  from decode
 ),
 base as (
   select
     texte,
-    coalesce(article, '') as article,
-    md5(regexp_replace(lower(dispositif), '[^a-z0-9]+', '', 'g')) as empreinte,
-    regexp_replace(lower(dispositif), '[^a-z0-9]+', '', 'g') = '' as vide,
-    (dispositif ~* '(cet\\s+alin|l\\W?alin\\S*\\s+(de\\s+cet\\s+article\\s+)?est\\s+supprim)'
-      and dispositif !~ '[0-9]') as ambigu
-  from brut
-  where texte is not null
+    article,
+    md5(dispositif) as empreinte_stricte,
+    md5(cle) as empreinte,
+    cle = '' as vide,
+    (txt ~* '(cet\\s+alin|l\\W?alin\\S*\\s+(de\\s+cet\\s+article\\s+)?est\\s+supprim)'
+      and txt !~ '[0-9]') as ambigu
+  from norm
 ),
 familles as (
   select texte, article, empreinte, bool_or(ambigu) as ambigu, count(*)::int as nb
   from base
   where not vide
   group by texte, article, empreinte
+),
+familles_strictes as (
+  select texte, article, empreinte_stricte, bool_or(ambigu) as ambigu, count(*)::int as nb
+  from base
+  where not vide
+  group by texte, article, empreinte_stricte
+),
+doublons_stricts as (
+  select * from familles_strictes where nb > 1 and not ambigu
 ),
 doublons as (
   select * from familles where nb > 1 and not ambigu
@@ -189,6 +266,9 @@ select
   (select coalesce(sum(nb - 1), 0) from doublons)::int               as nb_copies,
   (select coalesce(max(nb), 0) from doublons)::int                   as plus_grosse,
   (select coalesce(sum(nb), 0) from familles where nb > 1 and ambigu)::int as nb_ambigus,
+  (select count(*) from doublons_stricts)::int                       as nb_groupes_stricts,
+  (select coalesce(sum(nb), 0) from doublons_stricts)::int           as nb_identiques_stricts,
+  (select coalesce(sum(nb - 1), 0) from doublons_stricts)::int       as nb_copies_strictes,
   (select count(*) from doublons where nb = 2)::int                  as b1,
   (select count(*) from doublons where nb between 3 and 5)::int      as b2,
   (select count(*) from doublons where nb between 6 and 10)::int     as b3,
@@ -216,7 +296,10 @@ const AMDT_BUCKETS = ["1", "2–5", "6–10", "11–25", "26–50", "51–100", 
 const FAMILLE_BUCKETS = ["2", "3–5", "6–10", "11–50", "51–100", "> 100"];
 
 function buckets(row: Row, labels: string[]): Bucket[] {
-  return labels.map((label, i) => ({ label, count: Number(row[`b${i + 1}`] ?? 0) }));
+  return labels.map((label, i) => ({
+    label,
+    count: Number(row[`b${i + 1}`] ?? 0),
+  }));
 }
 
 async function computeLois(): Promise<LoiStats> {
@@ -244,7 +327,9 @@ async function computeAmendements(): Promise<AmendementStats> {
 }
 
 async function computeIdentiques(): Promise<IdentiquesStats> {
-  const [i] = await longQuery<Row & { top_textes: TexteIdentiques[] | null }>(SQL_IDENTIQUES);
+  const [i] = await longQuery<Row & { top_textes: TexteIdentiques[] | null }>(
+    SQL_IDENTIQUES,
+  );
   return {
     nbAvecTexte: Number(i.nb_avec_texte),
     nbFamilles: Number(i.nb_familles),
@@ -252,6 +337,9 @@ async function computeIdentiques(): Promise<IdentiquesStats> {
     nbCopies: Number(i.nb_copies),
     plusGrosseFamille: Number(i.plus_grosse),
     nbAmbigus: Number(i.nb_ambigus),
+    nbGroupesStricts: Number(i.nb_groupes_stricts),
+    nbIdentiquesStricts: Number(i.nb_identiques_stricts),
+    nbCopiesStrictes: Number(i.nb_copies_strictes),
     distribution: buckets(i, FAMILLE_BUCKETS),
     topTextes: i.top_textes ?? [],
   };
@@ -266,7 +354,8 @@ const CACHE_MS = Number(process.env.STATS_CACHE_HOURS ?? 24) * 60 * 60 * 1000;
 
 export type { Calcul };
 
-export const getLoiStats = () => cachedOnDisk("lois", SQL_LOIS, CACHE_MS, computeLois);
+export const getLoiStats = () =>
+  cachedOnDisk("lois", SQL_LOIS, CACHE_MS, computeLois);
 export const getAmendementStats = () =>
   cachedOnDisk("amendements", SQL_AMENDEMENTS, CACHE_MS, computeAmendements);
 export const getIdentiquesStats = () =>

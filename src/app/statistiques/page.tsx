@@ -48,7 +48,7 @@ async function Load<T>({
     <>
       {children(result.data)}
       <p className="-mt-8 text-xs text-muted">
-        {title} · calculé le {title} · calculé le {formatDate(result.calculeLe)}
+        {title} · calculé le {formatDate(result.calculeLe)}
       </p>
     </>
   );

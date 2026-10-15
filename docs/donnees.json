@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-14T16:44:57.832Z",
+  "generatedAt": "2026-10-15T09:20:56.239Z",
   "lois": {
-    "calculeLe": "2026-10-14T16:40:49.897Z",
+    "calculeLe": "2026-10-14T23:58:08.564Z",
     "data": {
       "nbLoisPromulguees": 2372,
       "nbLoisAvecArticles": 2372,
@@ -41,29 +41,29 @@
     }
   },
   "amendements": {
-    "calculeLe": "2026-10-14T16:40:48.055Z",
+    "calculeLe": "2026-10-14T23:58:07.732Z",
     "data": {
-      "nbAmendementsTotal": 610717,
-      "nbAmendementsSurArticle": 368973,
-      "nbArticlesAmendes": 19729,
-      "moyenneAmendements": 18.702062953013332,
+      "nbAmendementsTotal": 610741,
+      "nbAmendementsSurArticle": 368972,
+      "nbArticlesAmendes": 19727,
+      "moyenneAmendements": 18.70390834896335,
       "medianeAmendements": 5,
       "distribution": [
         {
           "label": "1",
-          "count": 3598
+          "count": 3599
         },
         {
           "label": "2–5",
-          "count": 7108
+          "count": 7107
         },
         {
           "label": "6–10",
-          "count": 3192
+          "count": 3191
         },
         {
           "label": "11–25",
-          "count": 3155
+          "count": 3154
         },
         {
           "label": "26–50",
@@ -81,18 +81,21 @@
     }
   },
   "identiques": {
-    "calculeLe": "2026-10-14T16:42:04.143Z",
+    "calculeLe": "2026-10-15T09:20:56.235Z",
     "data": {
-      "nbAvecTexte": 474190,
-      "nbFamilles": 55697,
-      "nbIdentiques": 236720,
-      "nbCopies": 181023,
+      "nbAvecTexte": 474323,
+      "nbFamilles": 55654,
+      "nbIdentiques": 236673,
+      "nbCopies": 181019,
       "plusGrosseFamille": 242,
       "nbAmbigus": 2155,
+      "nbGroupesStricts": 49443,
+      "nbIdentiquesStricts": 216056,
+      "nbCopiesStrictes": 166613,
       "distribution": [
         {
           "label": "2",
-          "count": 31303
+          "count": 31259
         },
         {
           "label": "3–5",
@@ -100,11 +103,11 @@
         },
         {
           "label": "6–10",
-          "count": 5016
+          "count": 5013
         },
         {
           "label": "11–50",
-          "count": 3821
+          "count": 3825
         },
         {
           "label": "51–100",
@@ -121,14 +124,14 @@
           "titre": "Institution d'un système universel de retraite",
           "amendements": 55438,
           "identiques": 51210,
-          "copies": 48301
+          "copies": 48300
         },
         {
           "texte": "PRJLANR5L16B0760",
           "titre": "PLFRSS pour 2023",
           "amendements": 22461,
           "identiques": 18694,
-          "copies": 16217
+          "copies": 16215
         },
         {
           "texte": "PRJLANR5L16B1680",
@@ -148,15 +151,15 @@
           "texte": "PIONANR5L15BTC4042",
           "titre": "fin de vie",
           "amendements": 3726,
-          "identiques": 3117,
-          "copies": 2461
+          "identiques": 3110,
+          "copies": 2455
         },
         {
           "texte": "PRJLANR5L15B1255",
           "titre": "PLF pour 2019",
           "amendements": 5685,
-          "identiques": 3138,
-          "copies": 2339
+          "identiques": 3136,
+          "copies": 2338
         },
         {
           "texte": "PRJLANR5L15B3360",

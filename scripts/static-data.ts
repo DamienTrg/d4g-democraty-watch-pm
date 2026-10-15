@@ -18,8 +18,12 @@ async function main() {
     // pas de .env.local : on suppose les variables déjà définies
   }
 
-  const { getLoiStats, getAmendementStats, getIdentiquesStats } =
-    await import("../src/lib/stats");
+  const {
+    getLoiStats,
+    getAmendementStats,
+    getIdentiquesStats,
+    getCommissionStats,
+  } = await import("../src/lib/stats");
   const { getPool } = await import("../src/lib/db");
 
   console.log(
@@ -27,10 +31,11 @@ async function main() {
   );
 
   try {
-    const [lois, amendements, identiques] = await Promise.all([
+    const [lois, amendements, identiques, commissions] = await Promise.all([
       getLoiStats(),
       getAmendementStats(),
       getIdentiquesStats(),
+      getCommissionStats(),
     ]);
 
     const snapshot = {
@@ -43,6 +48,10 @@ async function main() {
       identiques: {
         calculeLe: identiques.calculeLe.toISOString(),
         data: identiques.data,
+      },
+      commissions: {
+        calculeLe: commissions.calculeLe.toISOString(),
+        data: commissions.data,
       },
     };
 

@@ -1,7 +1,8 @@
 import type { Bucket } from "@/lib/stats";
 
 const fmt = new Intl.NumberFormat("fr-FR");
-const plural = (n: number, word: string) => (n > 1 ? word : word.replace(/s$/, ""));
+const plural = (n: number, word: string) =>
+  n > 1 ? word : word.replace(/s$/, "");
 
 /**
  * Histogramme en barres verticales, en HTML/CSS pur (pas de librairie).
@@ -29,7 +30,10 @@ export function Histogram({
       <figcaption className="mb-8 text-sm font-medium">{title}</figcaption>
       <div
         className="grid h-48 gap-[2px] border-b border-line"
-        style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))`, gridTemplateRows: "100%" }}
+        style={{
+          gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))`,
+          gridTemplateRows: "100%",
+        }}
         role="img"
         aria-label={`${title} : ${buckets.map((b) => `${b.label} ${unitLabel}, ${b.count} ${itemLabel}`).join(" ; ")}`}
       >
@@ -39,10 +43,15 @@ export function Histogram({
             <div key={b.label} className="group relative flex h-full items-end">
               <div
                 className="w-full rounded-t-[4px] bg-series-1 transition-opacity group-hover:opacity-80"
-                style={{ height: `${(b.count / max) * 100}%`, minHeight: b.count ? 2 : 0 }}
+                style={{
+                  height: `${(b.count / max) * 100}%`,
+                  minHeight: b.count ? 2 : 0,
+                }}
               />
               <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-line bg-background px-2 py-1 text-xs shadow-sm group-hover:block">
-                <span className="font-medium">{b.label} {unitLabel}</span>
+                <span className="font-medium">
+                  {b.label} {unitLabel}
+                </span>
                 <br />
                 {fmt.format(b.count)} {plural(b.count, itemLabel)} · {pct} %
               </div>
@@ -52,21 +61,31 @@ export function Histogram({
       </div>
       <div
         className="grid gap-[2px] text-center text-xs text-muted tabular-nums"
-        style={{ gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))` }}
+        style={{
+          gridTemplateColumns: `repeat(${buckets.length}, minmax(0, 1fr))`,
+        }}
       >
         {buckets.map((b) => (
           <span key={b.label}>{b.label}</span>
         ))}
       </div>
-      <p className="text-center text-xs text-muted">Nombre d&apos;{unitLabel}</p>
+      <p className="text-center text-xs text-muted">
+        Nombre d&apos;{unitLabel}
+      </p>
 
       <details className="text-sm">
-        <summary className="cursor-pointer text-muted">Voir les données</summary>
+        <summary className="cursor-pointer text-muted">
+          Voir les données
+        </summary>
         <table className="mt-2 w-full text-left tabular-nums">
           <thead className="text-muted">
             <tr>
-              <th className="py-1 font-normal">{unitLabel[0].toUpperCase() + unitLabel.slice(1)}</th>
-              <th className="py-1 text-right font-normal">{itemLabel[0].toUpperCase() + itemLabel.slice(1)}</th>
+              <th className="py-1 font-normal">
+                {unitLabel[0].toUpperCase() + unitLabel.slice(1)}
+              </th>
+              <th className="py-1 text-right font-normal">
+                {itemLabel[0].toUpperCase() + itemLabel.slice(1)}
+              </th>
               <th className="py-1 text-right font-normal">Part</th>
             </tr>
           </thead>

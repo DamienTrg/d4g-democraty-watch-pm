@@ -11,12 +11,14 @@ import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   AmendementsSection,
+  CommissionsSection,
   formatDate,
   IdentiquesSection,
   LoisSection,
 } from "../src/app/statistiques/sections";
 import type {
   AmendementStats,
+  CommissionStats,
   IdentiquesStats,
   LoiStats,
 } from "../src/lib/stats";
@@ -27,6 +29,8 @@ type Snapshot = {
   lois: Snap<LoiStats>;
   amendements: Snap<AmendementStats>;
   identiques: Snap<IdentiquesStats>;
+  /** Absent des instantanés générés avant l'ajout de cette section. */
+  commissions?: Snap<CommissionStats>;
 };
 
 const DOCS = "docs";
@@ -54,6 +58,16 @@ function StaticPage({ snapshot }: { snapshot: Snapshot }) {
 
       <LoisSection lois={snapshot.lois.data} />
       <CalculeLe title="Lois et articles" iso={snapshot.lois.calculeLe} />
+
+      {snapshot.commissions && (
+        <>
+          <CommissionsSection commissions={snapshot.commissions.data} />
+          <CalculeLe
+            title="Textes par commission"
+            iso={snapshot.commissions.calculeLe}
+          />
+        </>
+      )}
 
       <AmendementsSection amendements={snapshot.amendements.data} />
       <CalculeLe

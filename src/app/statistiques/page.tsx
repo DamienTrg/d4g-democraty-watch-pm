@@ -4,12 +4,14 @@ import { connection } from "next/server";
 import { Suspense, type ReactNode } from "react";
 import {
   getAmendementStats,
+  getCommissionStats,
   getIdentiquesStats,
   getLoiStats,
   type Calcul,
 } from "@/lib/stats";
 import {
   AmendementsSection,
+  CommissionsSection,
   formatDate,
   IdentiquesSection,
   LoisSection,
@@ -84,6 +86,12 @@ export default function StatistiquesPage() {
       <Suspense fallback={<Pending title="Lois et articles" />}>
         <Load title="Lois et articles" load={getLoiStats}>
           {(lois) => <LoisSection lois={lois} />}
+        </Load>
+      </Suspense>
+
+      <Suspense fallback={<Pending title="Textes par commission" />}>
+        <Load title="Textes par commission" load={getCommissionStats}>
+          {(commissions) => <CommissionsSection commissions={commissions} />}
         </Load>
       </Suspense>
 

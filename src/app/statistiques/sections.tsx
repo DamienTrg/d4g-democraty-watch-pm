@@ -1,4 +1,10 @@
-import type { AmendementStats, IdentiquesStats, LoiStats } from "@/lib/stats";
+import type {
+  AmendementStats,
+  CommissionStats,
+  IdentiquesStats,
+  LoiStats,
+} from "@/lib/stats";
+import { Donut, type Slice } from "./Donut";
 import { Histogram } from "./Histogram";
 
 /*
@@ -341,6 +347,113 @@ export function IdentiquesSection({
             les {int.format(identiques.nbAvecTexte)} amendements dont le texte
             est publié sont analysés.
           </li>
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+const TONES = [1, 2, 3, 4, 5] as const;
+
+/** « Commission des affaires sociales » → « Affaires sociales » */
+function nomCourt(libelle: string) {
+  const court = libelle.replace(
+    /^Commission\s+(des|de la|de l'|de l’|du|d')\s*/i,
+    "",
+  );
+  return court.charAt(0).toUpperCase() + court.slice(1);
+}
+
+export function CommissionsSection({
+  commissions,
+}: {
+  commissions: CommissionStats;
+}) {
+  const liste = commissions.commissions;
+  const avecCommission = liste.reduce((s, c) => s + c.textes, 0);
+
+  // 5 premières commissions + « Autres » : un camembert reste lisible jusqu'à 6 parts.
+  const top = liste.slice(0, 5);
+  const autres = liste.slice(5).reduce((s, c) => s + c.textes, 0);
+  const slices: Slice[] = top.map((c, i) => ({
+    label: nomCourt(c.commission),
+    value: c.textes,
+    tone: TONES[i],
+  }));
+  if (autres > 0) {
+    slices.push({
+      label: `Autres (${liste.length - 5} commissions)`,
+      value: autres,
+      tone: "other",
+    });
+  }
+
+  return (
+    <section className="flex flex-col gap-6">
+      <div>
+        <h2 className="text-xl font-semibold">
+          Textes de loi par commission saisie
+        </h2>
+        <p className="mt-1 text-sm text-muted">
+          Source : Assemblée nationale. Commission saisie au fond lors de la
+          première lecture à l&apos;Assemblée, pour chaque projet ou proposition
+          de loi.
+        </p>
+      </div>
+      <Donut
+        slices={slices}
+        centerValue={int.format(avecCommission)}
+        centerLabel="textes de loi"
+        ariaLabel={`Répartition des textes de loi par commission : ${slices
+          .map((s) => `${s.label} ${s.value}`)
+          .join(", ")}`}
+      />
+      <details className="text-sm">
+        <summary className="cursor-pointer text-muted">
+          Voir toutes les commissions ({int.format(liste.length)})
+        </summary>
+        <table className="mt-2 w-full text-left tabular-nums">
+          <thead className="text-muted">
+            <tr>
+              <th className="py-1 font-normal">Commission</th>
+              <th className="py-1 pl-2 text-right font-normal">Textes</th>
+              <th className="py-1 pl-2 text-right font-normal">Part</th>
+            </tr>
+          </thead>
+          <tbody>
+            {liste.map((c) => (
+              <tr key={c.commission} className="border-t border-line">
+                <td className="py-1 pr-4">{c.commission}</td>
+                <td className="py-1 text-right">{int.format(c.textes)}</td>
+                <td className="py-1 text-right">
+                  {pct(c.textes, avecCommission)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </details>
+      <div className="rounded-lg border border-line p-4 text-sm leading-6 text-muted">
+        <p className="font-medium text-foreground">Méthode</p>
+        <ul className="mt-2 list-disc pl-5">
+          <li>
+            Seule la commission saisie au fond en première lecture à
+            l&apos;Assemblée est retenue, pas les commissions saisies pour avis
+            ni celles des lectures suivantes.
+          </li>
+          <li>
+            Les commissions sont regroupées par nom d&apos;une législature à
+            l&apos;autre ; une commission renommée apparaît donc séparément. Les
+            commissions spéciales, créées pour un seul texte, sont dans « Autres
+            ».
+          </li>
+          {commissions.nbSansCommission > 0 && (
+            <li>
+              {commissions.nbSansCommission > 1
+                ? `${int.format(commissions.nbSansCommission)} textes de loi sur ${int.format(commissions.nbTextes)} n'ont pas de commission identifiée (par exemple, une proposition de loi pas encore renvoyée) et ne sont pas représentés.`
+                : `1 texte de loi sur ${int.format(commissions.nbTextes)} n'a pas de commission identifiée (par exemple, une proposition de loi pas encore renvoyée) et n'est pas représenté.`}
+            </li>
+          )}
         </ul>
       </div>
     </section>

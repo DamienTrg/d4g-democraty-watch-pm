@@ -360,3 +360,75 @@ export const getAmendementStats = () =>
   cachedOnDisk("amendements", SQL_AMENDEMENTS, CACHE_MS, computeAmendements);
 export const getIdentiquesStats = () =>
   cachedOnDisk("identiques", SQL_IDENTIQUES, CACHE_MS, computeIdentiques);
+
+/*
+ * Textes de loi par commission saisie au fond (Assemblée nationale).
+ *
+ * Texte de loi = dossier législatif dont la procédure est un projet ou une
+ * proposition de loi. Commission = organe du premier acte « saisie au fond »
+ * à l'Assemblée (codeActe AN…-COM-FOND-SAISIE), cherché à n'importe quelle
+ * profondeur dans l'arbre des actes législatifs. Les commissions sont
+ * regroupées par libellé, donc d'une législature à l'autre.
+ */
+export type CommissionCount = { commission: string; textes: number };
+
+export type CommissionStats = {
+  nbTextes: number;
+  nbSansCommission: number;
+  commissions: CommissionCount[];
+};
+
+const SQL_COMMISSIONS = `
+with textes as (
+  select d.uid, d.data
+  from assemblee.dossiers d
+  where d.data->'procedureParlementaire'->>'libelle' ilike '%loi%'
+),
+saisies as (
+  select
+    t.uid,
+    (
+      select a->>'organeRef'
+      from jsonb_path_query(
+        t.data,
+        'strict $.** ? (@.codeActe like_regex "^AN.*-COM-FOND-SAISIE$")'
+      ) a
+      where a->>'organeRef' is not null
+      order by a->>'dateActe' nulls last
+      limit 1
+    ) as organe
+  from textes t
+),
+libelles as (
+  select
+    s.uid,
+    coalesce(o.data->>'libelle', o.data->>'libelleAbrege', s.organe) as libelle
+  from saisies s
+  left join assemblee.organes o on o.uid = s.organe
+  where s.organe is not null
+)
+select
+  (select count(*) from textes)::int                    as nb_textes,
+  (select count(*) from saisies where organe is null)::int as nb_sans_commission,
+  (
+    select coalesce(json_agg(json_build_object('commission', libelle, 'textes', nb)
+                             order by nb desc, libelle), '[]'::json)
+    from (select libelle, count(*)::int as nb from libelles group by libelle) c
+  ) as commissions;
+`;
+
+async function computeCommissions(): Promise<CommissionStats> {
+  const [r] = await longQuery<{
+    nb_textes: number;
+    nb_sans_commission: number;
+    commissions: CommissionCount[];
+  }>(SQL_COMMISSIONS);
+  return {
+    nbTextes: Number(r.nb_textes),
+    nbSansCommission: Number(r.nb_sans_commission),
+    commissions: r.commissions,
+  };
+}
+
+export const getCommissionStats = () =>
+  cachedOnDisk("commissions", SQL_COMMISSIONS, CACHE_MS, computeCommissions);

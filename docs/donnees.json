@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-15T12:58:24.489Z",
+  "generatedAt": "2026-10-16T16:04:50.609Z",
   "lois": {
     "calculeLe": "2026-10-14T23:58:08.564Z",
     "data": {
@@ -336,5 +336,11 @@
         }
       ]
     }
-  }
+  },
+  "textes": [
+    {
+      "uid": "PRJLANR5L17B1906",
+      "titre": "Projet de loi de finances pour 2026"
+    }
+  ]
 }

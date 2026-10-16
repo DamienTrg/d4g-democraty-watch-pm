@@ -6,6 +6,7 @@
  * GitHub Pages : Settings → Pages → « Deploy from a branch » → main, /docs.
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -49,6 +50,9 @@ type TexteExport = {
   pages: Record<string, Amendement[][]>;
 };
 
+/** Empreinte de styles.css, ajoutée à son adresse pour forcer le rechargement. */
+let versionCss = "0";
+
 /** Enveloppe HTML commune ; `racine` = chemin relatif vers docs/. */
 function documentHtml(titre: string, corps: string, racine = "") {
   return `<!doctype html>
@@ -59,7 +63,7 @@ function documentHtml(titre: string, corps: string, racine = "") {
 <title>${titre.replace(/</g, "&lt;")}</title>
 <meta name="description" content="Lois promulguées, articles et amendements : statistiques issues des données de l'Assemblée nationale et de Légifrance.">
 <style>:root{--font-geist-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-geist-mono:ui-monospace,monospace}</style>
-<link rel="stylesheet" href="${racine}styles.css">
+<link rel="stylesheet" href="${racine}styles.css?v=${versionCss}">
 </head>
 <body class="min-h-full flex flex-col font-sans antialiased">
 ${corps}
@@ -243,7 +247,50 @@ function StaticPage({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
+/*
+ * Génère docs/styles.css AVANT les pages : si Tailwind échoue ou produit une
+ * feuille incomplète, on s'arrête au lieu de publier de nouvelles pages avec
+ * l'ancienne feuille de style.
+ */
+async function genererCss() {
+  const sortie = path.join(DOCS, "styles.css");
+  execFileSync(
+    process.execPath,
+    [
+      path.join("node_modules", "@tailwindcss", "cli", "dist", "index.mjs"),
+      "-i",
+      path.join("src", "app", "globals.css"),
+      "-o",
+      sortie,
+      "--minify",
+    ],
+    { stdio: "inherit" },
+  );
+  const css = await readFile(sortie, "utf8");
+  // Quelques classes propres à chaque page : leur absence signale un problème.
+  const attendues = [
+    ".max-w-4xl",
+    ".max-w-6xl",
+    ".bg-series-1",
+    ".fill-series-2",
+    "lg\\:hidden",
+  ];
+  const manquantes = attendues.filter((c) => !css.includes(c));
+  if (manquantes.length > 0) {
+    throw new Error(
+      `styles.css incomplet (classes absentes : ${manquantes.join(", ")}). ` +
+        "Vérifiez que « npm install » a bien été lancé, puis relancez « npm run static:build ».",
+    );
+  }
+  versionCss = createHash("sha256").update(css).digest("hex").slice(0, 10);
+  console.log(
+    `✓ Feuille de style générée (${Math.round(css.length / 1024)} Ko)`,
+  );
+}
+
 async function main() {
+  await genererCss();
+
   const snapshot = JSON.parse(
     await readFile(path.join(DOCS, "donnees.json"), "utf8"),
   ) as Snapshot;
@@ -261,19 +308,6 @@ async function main() {
     await mkdir(path.join(DOCS, "textes", t.uid), { recursive: true });
     await genererTexte(t.uid);
   }
-
-  execFileSync(
-    process.execPath,
-    [
-      path.join("node_modules", "@tailwindcss", "cli", "dist", "index.mjs"),
-      "-i",
-      path.join("src", "app", "globals.css"),
-      "-o",
-      path.join(DOCS, "styles.css"),
-      "--minify",
-    ],
-    { stdio: "inherit" },
-  );
 
   console.log(
     `✓ Page statique générée dans ${DOCS}/ (index.html, styles.css, donnees.json)`,

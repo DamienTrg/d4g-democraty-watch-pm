@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Fichiers où chercher les classes, déclarés explicitement (en plus de la
+   détection automatique) : l'app et les scripts de la page statique. */
+@source "../";
+@source "../../scripts";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

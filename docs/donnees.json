@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-10-16T16:04:50.609Z",
+  "generatedAt": "2026-10-16T16:32:50.149Z",
   "lois": {
-    "calculeLe": "2026-10-14T23:58:08.564Z",
+    "calculeLe": "2026-10-16T16:05:10.157Z",
     "data": {
       "nbLoisPromulguees": 2372,
       "nbLoisAvecArticles": 2372,
@@ -41,21 +41,21 @@
     }
   },
   "amendements": {
-    "calculeLe": "2026-10-14T23:58:07.732Z",
+    "calculeLe": "2026-10-16T16:04:58.127Z",
     "data": {
-      "nbAmendementsTotal": 610741,
-      "nbAmendementsSurArticle": 368972,
-      "nbArticlesAmendes": 19727,
-      "moyenneAmendements": 18.70390834896335,
+      "nbAmendementsTotal": 611559,
+      "nbAmendementsSurArticle": 369043,
+      "nbArticlesAmendes": 19739,
+      "moyenneAmendements": 18.696134555955215,
       "medianeAmendements": 5,
       "distribution": [
         {
           "label": "1",
-          "count": 3599
+          "count": 3602
         },
         {
           "label": "2–5",
-          "count": 7107
+          "count": 7114
         },
         {
           "label": "6–10",
@@ -63,11 +63,11 @@
         },
         {
           "label": "11–25",
-          "count": 3154
+          "count": 3155
         },
         {
           "label": "26–50",
-          "count": 1453
+          "count": 1454
         },
         {
           "label": "51–100",
@@ -81,33 +81,33 @@
     }
   },
   "identiques": {
-    "calculeLe": "2026-10-15T09:20:56.235Z",
+    "calculeLe": "2026-10-16T16:05:41.737Z",
     "data": {
-      "nbAvecTexte": 474323,
-      "nbFamilles": 55654,
-      "nbIdentiques": 236673,
-      "nbCopies": 181019,
+      "nbAvecTexte": 474464,
+      "nbFamilles": 55662,
+      "nbIdentiques": 236792,
+      "nbCopies": 181130,
       "plusGrosseFamille": 242,
       "nbAmbigus": 2155,
-      "nbGroupesStricts": 49443,
-      "nbIdentiquesStricts": 216056,
-      "nbCopiesStrictes": 166613,
+      "nbGroupesStricts": 49438,
+      "nbIdentiquesStricts": 216200,
+      "nbCopiesStrictes": 166762,
       "distribution": [
         {
           "label": "2",
-          "count": 31259
+          "count": 31249
         },
         {
           "label": "3–5",
-          "count": 15440
+          "count": 15450
         },
         {
           "label": "6–10",
-          "count": 5013
+          "count": 5017
         },
         {
           "label": "11–50",
-          "count": 3825
+          "count": 3829
         },
         {
           "label": "51–100",
@@ -183,24 +183,24 @@
           "copies": 2141
         },
         {
-          "texte": "PRJLANR5L17B0324",
-          "titre": "PLF pour 2025",
-          "amendements": 6113,
-          "identiques": 2953,
-          "copies": 2024
+          "texte": "PRJLANR5L17B3210",
+          "titre": "projet de loi de finances pour 2027",
+          "amendements": 6254,
+          "identiques": 2924,
+          "copies": 2043
         }
       ]
     }
   },
   "commissions": {
-    "calculeLe": "2026-10-15T12:38:01.245Z",
+    "calculeLe": "2026-10-16T16:04:51.051Z",
     "data": {
-      "nbTextes": 9999,
-      "nbSansCommission": 1954,
+      "nbTextes": 10003,
+      "nbSansCommission": 1956,
       "commissions": [
         {
           "commission": "Commission des lois constitutionnelles, de la législation et de l'administration générale de la République",
-          "textes": 3005
+          "textes": 3007
         },
         {
           "commission": "Commission des affaires sociales",

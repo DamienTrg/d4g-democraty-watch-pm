@@ -73,4 +73,11 @@ Elle ne se connecte pas à la base : elle affiche un instantané des chiffres.
    Source « Deploy from a branch », branche `main`, dossier `/docs`.
 
 Pour mettre à jour les chiffres plus tard, refaire les étapes 1 et 2.
+
+La page statique inclut aussi le **PLF le plus récent, article par article** (`docs/textes/<uid>/`),
+avec ses amendements et les groupes d'amendements identiques. Pour publier d'autres textes :
+
+```bash
+STATIC_TEXTES=PRJLANR5L17B0324,PRJLANR5L16B0760 npm run static
+```
 La page utilise le cache de 24 h : `npm run stats:reset` avant pour forcer un recalcul.

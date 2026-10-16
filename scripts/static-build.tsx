@@ -6,7 +6,7 @@
  * GitHub Pages : Settings → Pages → « Deploy from a branch » → main, /docs.
  */
 import { execFileSync } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
@@ -16,6 +16,14 @@ import {
   IdentiquesSection,
   LoisSection,
 } from "../src/app/statistiques/sections";
+import {
+  A,
+  ListeAmendements,
+  Sommaire,
+  VueTexte,
+  type LienFn,
+} from "../src/app/textes/[uid]/vue";
+import type { Amendement, TexteIndex } from "../src/lib/textes-commun";
 import type {
   AmendementStats,
   CommissionStats,
@@ -31,7 +39,133 @@ type Snapshot = {
   identiques: Snap<IdentiquesStats>;
   /** Absent des instantanés générés avant l'ajout de cette section. */
   commissions?: Snap<CommissionStats>;
+  /** Textes publiés article par article (docs/textes/<uid>/). */
+  textes?: { uid: string; titre: string }[];
 };
+
+type TexteExport = {
+  generatedAt: string;
+  index: TexteIndex;
+  pages: Record<string, Amendement[][]>;
+};
+
+/** Enveloppe HTML commune ; `racine` = chemin relatif vers docs/. */
+function documentHtml(titre: string, corps: string, racine = "") {
+  return `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${titre.replace(/</g, "&lt;")}</title>
+<meta name="description" content="Lois promulguées, articles et amendements : statistiques issues des données de l'Assemblée nationale et de Légifrance.">
+<style>:root{--font-geist-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-geist-mono:ui-monospace,monospace}</style>
+<link rel="stylesheet" href="${racine}styles.css">
+</head>
+<body class="min-h-full flex flex-col font-sans antialiased">
+${corps}
+</body>
+</html>
+`;
+}
+
+/*
+ * Insère sommaire.html dans les emplacements [data-sommaire] et met en avant
+ * l'article courant. Sans JavaScript, le lien « Voir la liste des articles »
+ * reste disponible.
+ */
+const CLASSES_COURANT = ["bg-surface-1", "font-medium", "ring-1", "ring-line"];
+const CHARGER_SOMMAIRE = (articleId: string) => `<script>
+fetch("sommaire.html").then(r => r.ok ? r.text() : Promise.reject()).then(html => {
+  document.querySelectorAll("[data-sommaire]").forEach(el => {
+    el.innerHTML = html;
+    const a = el.querySelector('[data-article="${articleId}"]');
+    if (a) { a.setAttribute("aria-current", "true"); a.classList.add(${CLASSES_COURANT.map((c) => JSON.stringify(c)).join(", ")}); let c = a.parentElement; while (c && getComputedStyle(c).overflowY !== "auto") c = c.parentElement; if (c) c.scrollTop += a.getBoundingClientRect().top - c.getBoundingClientRect().top - 60; }
+  });
+}).catch(() => {});
+</script>`;
+
+/** Une page HTML par article et par page d'amendements, plus index.html. */
+async function genererTexte(uid: string) {
+  const dir = path.join(DOCS, "textes", uid);
+  const exp = JSON.parse(
+    await readFile(path.join(dir, "donnees.json"), "utf8"),
+  ) as TexteExport;
+  const { index } = exp;
+
+  // Retire les pages d'une génération précédente (articles renumérotés…).
+  for (const f of await readdir(dir)) {
+    if (f.endsWith(".html")) await rm(path.join(dir, f));
+  }
+
+  const lien: LienFn = (article, page = 1) =>
+    `${article}-${page}.html#amendements`;
+  // Sommaire écrit une seule fois ; chaque page le charge (voir CHARGER_SOMMAIRE).
+  await writeFile(
+    path.join(dir, "sommaire.html"),
+    renderToStaticMarkup(<Sommaire index={index} lien={lien} Lien={A} />),
+  );
+  const emplacement = (
+    <div data-sommaire>
+      <a className="px-2 text-sm underline" href="sommaire.html">
+        Voir la liste des articles
+      </a>
+    </div>
+  );
+
+  const parDefaut =
+    index.articles.find((a) => a.position === "A") ?? index.articles[0];
+  let n = 0;
+
+  for (const article of index.articles) {
+    const pages = exp.pages[article.id] ?? [[]];
+    for (let p = 1; p <= pages.length; p++) {
+      const corps = renderToStaticMarkup(
+        <main className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-12">
+          <a
+            className="text-sm text-muted hover:underline"
+            href="../../index.html"
+          >
+            ← Statistiques des textes de loi
+          </a>
+          <VueTexte
+            index={index}
+            article={article}
+            lien={lien}
+            Lien={A}
+            sommaire={emplacement}
+          >
+            <ListeAmendements
+              article={article}
+              page={p}
+              liste={pages[p - 1] ?? []}
+              lien={lien}
+              Lien={A}
+            />
+          </VueTexte>
+          <footer className="border-t border-line pt-6 text-sm text-muted">
+            Instantané du {formatDate(new Date(exp.generatedAt))}. Source :
+            Assemblée nationale (open data). Données brutes :{" "}
+            <a className="underline" href="donnees.json">
+              donnees.json
+            </a>
+            .
+          </footer>
+        </main>,
+      );
+      const html = documentHtml(
+        `${index.titre} — Democraty Watch`,
+        corps + CHARGER_SOMMAIRE(article.id),
+        "../../",
+      );
+      await writeFile(path.join(dir, `${article.id}-${p}.html`), html);
+      if (article.id === parDefaut.id && p === 1) {
+        await writeFile(path.join(dir, "index.html"), html);
+      }
+      n++;
+    }
+  }
+  console.log(`✓ ${index.titre} : ${n} pages générées dans ${dir}/`);
+}
 
 const DOCS = "docs";
 
@@ -54,6 +188,22 @@ function StaticPage({ snapshot }: { snapshot: Snapshot }) {
         <p className="text-sm text-muted">
           Instantané du {formatDate(new Date(snapshot.generatedAt))}.
         </p>
+        {snapshot.textes && snapshot.textes.length > 0 && (
+          <p className="text-sm">
+            Lire article par article :{" "}
+            {snapshot.textes.map((t, i) => (
+              <span key={t.uid}>
+                {i > 0 && " · "}
+                <a
+                  className="underline"
+                  href={`textes/${encodeURIComponent(t.uid)}/index.html`}
+                >
+                  {t.titre}
+                </a>
+              </span>
+            ))}
+          </p>
+        )}
       </header>
 
       <LoisSection lois={snapshot.lois.data} />
@@ -98,25 +248,19 @@ async function main() {
     await readFile(path.join(DOCS, "donnees.json"), "utf8"),
   ) as Snapshot;
 
-  const html = `<!doctype html>
-  <html lang="fr">
-  <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Statistiques des textes de loi — Democraty Watch</title>
-  <meta name="description" content="Lois promulguées, articles et amendements : statistiques issues des données de l'Assemblée nationale et de Légifrance.">
-  <style>:root{--font-geist-sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-geist-mono:ui-monospace,monospace}</style>
-  <link rel="stylesheet" href="styles.css">
-  </head>
-  <body class="min-h-full flex flex-col font-sans antialiased">
-  ${renderToStaticMarkup(<StaticPage snapshot={snapshot} />)}
-  </body>
-  </html>
-  `;
+  const html = documentHtml(
+    "Statistiques des textes de loi — Democraty Watch",
+    renderToStaticMarkup(<StaticPage snapshot={snapshot} />),
+  );
 
   await writeFile(path.join(DOCS, "index.html"), html);
   // Sans ce fichier, GitHub Pages passe le dossier dans Jekyll (inutile ici).
   await writeFile(path.join(DOCS, ".nojekyll"), "");
+
+  for (const t of snapshot.textes ?? []) {
+    await mkdir(path.join(DOCS, "textes", t.uid), { recursive: true });
+    await genererTexte(t.uid);
+  }
 
   execFileSync(
     process.execPath,

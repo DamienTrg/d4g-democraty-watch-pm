@@ -4,6 +4,16 @@ import { cachedOnDisk } from "@/lib/cache";
 import { longQuery } from "@/lib/db";
 import { htmlToText } from "@/lib/html";
 import { cleNormalisee, estAmbigu, texteDecode } from "@/lib/sql-texte";
+import {
+  decouperEnPages,
+  type Amendement,
+  type ArticleEntry,
+  type Position,
+  type Signataire,
+  type TexteIndex,
+} from "@/lib/textes-commun";
+
+export * from "@/lib/textes-commun";
 
 /*
  * Lecture d'un texte de loi article par article, avec ses amendements
@@ -67,32 +77,6 @@ export async function findPlf(annee: number): Promise<TexteRef | null> {
 /* ------------------------------------------------------------------ */
 /* Sommaire d'un texte : articles visés et nombre d'amendements        */
 /* ------------------------------------------------------------------ */
-
-export type Position = "A" | "Avant" | "Apres";
-
-export type ArticleEntry = {
-  /** Identifiant stable dans l'URL (?article=…) */
-  id: string;
-  titre: string;
-  position: Position;
-  type: string | null;
-  url: string | null;
-  nb: number;
-  /**
-   * Amendements regroupés par dispositif identique (même règle que les
-   * statistiques des doublons). Les plus grands groupes d'abord ; un
-   * amendement sans équivalent forme un groupe à lui seul.
-   */
-  groupes: string[][];
-};
-
-export type TexteIndex = {
-  uid: string;
-  titre: string;
-  titreLong: string | null;
-  total: number;
-  articles: ArticleEntry[];
-};
 
 const SQL_INDEX = `
 with a as (
@@ -187,14 +171,6 @@ function compareEntries(a: ArticleEntry, b: ArticleEntry) {
   return ka[3].localeCompare(kb[3], "fr");
 }
 
-export function libelleArticle(e: Pick<ArticleEntry, "titre" | "position">) {
-  if (e.position === "Avant")
-    return `Avant l'${e.titre.replace(/^Article/i, "article")}`;
-  if (e.position === "Apres")
-    return `Après l'${e.titre.replace(/^Article/i, "article")}`;
-  return e.titre;
-}
-
 export async function getTexteIndex(uid: string) {
   return cachedOnDisk(
     key("index", uid),
@@ -232,22 +208,6 @@ export async function getTexteIndex(uid: string) {
 /* ------------------------------------------------------------------ */
 /* Amendements d'un article (une page à la fois)                       */
 /* ------------------------------------------------------------------ */
-
-export type Signataire = {
-  nom: string;
-  groupe: string | null;
-  auteur: boolean;
-};
-
-export type Amendement = {
-  uid: string;
-  numero: string;
-  sort: string | null;
-  auteurLibelle: string | null;
-  signataires: Signataire[];
-  dispositif: string;
-  expose: string;
-};
 
 const SQL_AMENDEMENTS = `
 select
@@ -309,26 +269,6 @@ function lireAuteurLibelle(sig: Json) {
   return str(s.libelle);
 }
 
-/** Environ 50 amendements par page, sans jamais couper un groupe. */
-export const PAGE_SIZE = 50;
-
-export function decouperEnPages(article: ArticleEntry): string[][][] {
-  const pages: string[][][] = [];
-  let courante: string[][] = [];
-  let taille = 0;
-  for (const g of article.groupes) {
-    if (courante.length > 0 && taille + g.length > PAGE_SIZE) {
-      pages.push(courante);
-      courante = [];
-      taille = 0;
-    }
-    courante.push(g);
-    taille += g.length;
-  }
-  if (courante.length > 0) pages.push(courante);
-  return pages;
-}
-
 export async function getArticleAmendements(
   texte: string,
   article: ArticleEntry,
@@ -373,34 +313,4 @@ export async function getArticleAmendements(
         }));
     },
   );
-}
-
-/*
- * Lien vers le texte intégral sur le site de l'Assemblée.
- *
- * Les adresses stockées dans les amendements (urlDivisionTexteVise, du type
- * « /15/textes/2623.asp#D_Article_56 ») renvoient vers l'ancien site et ne
- * fonctionnent plus. On utilise à la place l'adresse du texte en open data,
- * construite à partir de son identifiant et valable pour tous les textes.
- *
- * Pour aller directement à l'article, on ajoute un « fragment de texte »
- * (#:~:text=ARTICLE 3) : les navigateurs récents font défiler jusqu'à la
- * première occurrence ; les autres ouvrent simplement le texte en haut.
- */
-export function lienTexteAssemblee(texteUid: string) {
-  return `https://www.assemblee-nationale.fr/dyn/opendata/${encodeURIComponent(texteUid)}.html`;
-}
-
-export function lienArticleAssemblee(texteUid: string, titreArticle: string) {
-  const base = lienTexteAssemblee(texteUid);
-  const t = titreArticle.toLowerCase();
-  let cible: string | null = null;
-  if (/liminaire/.test(t)) cible = "ARTICLE liminaire";
-  else {
-    const m = t.match(
-      /^article\s+(\d+)(?:er)?(?:\s+(bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies))?\b/,
-    );
-    if (m) cible = `ARTICLE ${m[1]}${m[2] ? ` ${m[2]}` : ""}`;
-  }
-  return cible ? `${base}#:~:text=${encodeURIComponent(cible)}` : base;
 }

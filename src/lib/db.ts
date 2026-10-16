@@ -56,7 +56,9 @@ export async function longQuery<T extends QueryResultRow = QueryResultRow>(
   const client = await getPool().connect();
   try {
     await client.query("begin read only");
-    await client.query(`set local statement_timeout = ${Math.max(0, Math.floor(timeoutMs))}`);
+    await client.query(
+      `set local statement_timeout = ${Math.max(0, Math.floor(timeoutMs))}`,
+    );
     const result = await client.query<T>(text, params);
     await client.query("commit");
     return result.rows;

@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Democraty Watch",
-  description: "Suivi des textes de loi et des amendements — projet DataForGood",
+  description:
+    "Suivi des textes de loi et des amendements — projet DataForGood",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

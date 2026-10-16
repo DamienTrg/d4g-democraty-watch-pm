@@ -29,11 +29,18 @@ const globalForCache = globalThis as unknown as {
 const memo = (globalForCache.memo ??= new Map());
 const inflight = (globalForCache.inflight ??= new Map());
 
-const hash = (s: string) => createHash("sha256").update(s).digest("hex").slice(0, 16);
+const hash = (s: string) =>
+  createHash("sha256").update(s).digest("hex").slice(0, 16);
 const fileFor = (key: string) => path.join(CACHE_DIR, `${key}.json`);
-const toCalcul = <T>(e: Entry<T>): Calcul<T> => ({ data: e.data, calculeLe: new Date(e.calculeLe) });
+const toCalcul = <T>(e: Entry<T>): Calcul<T> => ({
+  data: e.data,
+  calculeLe: new Date(e.calculeLe),
+});
 
-async function readEntry<T>(key: string, version: string): Promise<Entry<T> | undefined> {
+async function readEntry<T>(
+  key: string,
+  version: string,
+): Promise<Entry<T> | undefined> {
   const inMemory = memo.get(key) as Entry<T> | undefined;
   if (inMemory?.version === version) return inMemory;
   try {
@@ -60,13 +67,21 @@ async function writeEntry<T>(key: string, entry: Entry<T>) {
   }
 }
 
-function refresh<T>(key: string, version: string, compute: () => Promise<T>): Promise<Calcul<T>> {
+function refresh<T>(
+  key: string,
+  version: string,
+  compute: () => Promise<T>,
+): Promise<Calcul<T>> {
   const running = inflight.get(key) as Promise<Calcul<T>> | undefined;
   if (running) return running; // une seule requête à la fois par clé
 
   const promise = (async () => {
     const data = await compute();
-    const entry: Entry<T> = { version, calculeLe: new Date().toISOString(), data };
+    const entry: Entry<T> = {
+      version,
+      calculeLe: new Date().toISOString(),
+      data,
+    };
     await writeEntry(key, entry);
     return toCalcul(entry);
   })().finally(() => inflight.delete(key));
@@ -90,7 +105,10 @@ export async function cachedOnDisk<T>(
   if (age >= maxAgeMs) {
     // Périmé : on sert l'ancien résultat et on recalcule en tâche de fond.
     refresh(key, version, compute).catch((error) =>
-      console.warn(`[cache] recalcul de « ${key} » échoué, ancien résultat conservé :`, error),
+      console.warn(
+        `[cache] recalcul de « ${key} » échoué, ancien résultat conservé :`,
+        error,
+      ),
     );
   }
   return toCalcul(entry);

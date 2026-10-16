@@ -103,7 +103,9 @@ export default function StatistiquesPage() {
 
       <Suspense fallback={<Pending title="Amendements identiques" />}>
         <Load title="Amendements identiques" load={getIdentiquesStats}>
-          {(identiques) => <IdentiquesSection identiques={identiques} />}
+          {(identiques) => (
+            <IdentiquesSection identiques={identiques} liensTextes />
+          )}
         </Load>
       </Suspense>
     </main>

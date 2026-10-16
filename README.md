@@ -19,6 +19,8 @@ L'endpoint `GET /api/health` renvoie le même diagnostic en JSON.
 - `src/app/api/health/route.ts` — vérification de la connexion
 - `src/app/page.tsx` — page d'accueil
 - `src/app/statistiques/` — page de statistiques (lois, articles, amendements)
+- `src/app/textes/[uid]/` — lecture d'un texte article par article, avec ses amendements
+  (`/textes/plf` ouvre le projet de loi de finances le plus récent : 2026, sinon 2025)
 - `src/lib/stats.ts` — requêtes SQL des statistiques
 - `src/lib/cache.ts` — cache sur disque (`.cache/stats/`), 24 h par défaut
 

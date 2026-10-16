@@ -243,8 +243,11 @@ function ComparaisonStricte({ identiques }: { identiques: IdentiquesStats }) {
 
 export function IdentiquesSection({
   identiques,
+  liensTextes = false,
 }: {
   identiques: IdentiquesStats;
+  /** Lien vers la page de lecture du texte (pas dans la page statique). */
+  liensTextes?: boolean;
 }) {
   return (
     <section className="flex flex-col gap-6">
@@ -306,7 +309,16 @@ export function IdentiquesSection({
                 {identiques.topTextes.map((t) => (
                   <tr key={t.texte} className="border-t border-line">
                     <td className="py-2 pr-4">
-                      <span className="block">{t.titre ?? t.texte}</span>
+                      {liensTextes ? (
+                        <a
+                          className="block underline-offset-2 hover:underline"
+                          href={`/textes/${encodeURIComponent(t.texte)}`}
+                        >
+                          {t.titre ?? t.texte}
+                        </a>
+                      ) : (
+                        <span className="block">{t.titre ?? t.texte}</span>
+                      )}
                       {t.titre && (
                         <span className="text-xs text-muted">{t.texte}</span>
                       )}

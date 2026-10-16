@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { cachedOnDisk } from "@/lib/cache";
 import { longQuery } from "@/lib/db";
 import { htmlToText } from "@/lib/html";
+import { cleNormalisee, estAmbigu, texteDecode } from "@/lib/sql-texte";
 
 /*
  * Lecture d'un texte de loi article par article, avec ses amendements
@@ -77,7 +78,12 @@ export type ArticleEntry = {
   type: string | null;
   url: string | null;
   nb: number;
-  uids: string[];
+  /**
+   * Amendements regroupés par dispositif identique (même règle que les
+   * statistiques des doublons). Les plus grands groupes d'abord ; un
+   * amendement sans équivalent forme un groupe à lui seul.
+   */
+  groupes: string[][];
 };
 
 export type TexteIndex = {
@@ -99,22 +105,44 @@ with a as (
       'A'
     ) as position,
     data->'pointeurFragmentTexte'->'division'->>'type' as type,
-    data->'pointeurFragmentTexte'->'division'->>'urlDivisionTexteVise' as url
+    data->'pointeurFragmentTexte'->'division'->>'urlDivisionTexteVise' as url,
+    ${texteDecode("(data->'corps'->'contenuAuteur'->>'dispositif')")} as txt
   from assemblee.amendements
   where data->>'texteLegislatifRef' = $1
+),
+b as (
+  select uid, titre, position, ${cleNormalisee("txt")} as cle, coalesce(${estAmbigu("txt")}, false) as ambigu
+  from a
+),
+groupes as (
+  select
+    titre,
+    position,
+    -- dispositif absent, vide ou « cet alinéa » générique : jamais regroupé
+    case when cle is null or cle = '' or ambigu then 'u:' || uid else md5(cle) end as g,
+    array_agg(uid order by uid) as uids,
+    count(*)::int as nb,
+    min(uid) as premier
+  from b
+  group by titre, position, 3
+),
+infos as (
+  select titre, position, max(type) as type, max(url) as url from a group by titre, position
 )
 select
   (select coalesce(d.data->'titres'->>'titrePrincipalCourt', d.data->'titres'->>'titrePrincipal')
      from assemblee.documents d where d.uid = $1) as titre,
   (select d.data->'titres'->>'titrePrincipal' from assemblee.documents d where d.uid = $1) as titre_long,
   coalesce((
-    select json_agg(g)
+    select json_agg(x)
     from (
-      select titre, position, max(type) as type, max(url) as url,
-             count(*)::int as nb, array_agg(uid order by uid) as uids
-      from a
-      group by titre, position
-    ) g
+      select i.titre, i.position, i.type, i.url,
+             sum(g.nb)::int as nb,
+             json_agg(g.uids order by g.nb desc, g.premier) as groupes
+      from groupes g
+      join infos i on i.titre = g.titre and i.position = g.position
+      group by i.titre, i.position, i.type, i.url
+    ) x
   ), '[]'::json) as articles;
 `;
 
@@ -281,14 +309,32 @@ function lireAuteurLibelle(sig: Json) {
   return str(s.libelle);
 }
 
+/** Environ 50 amendements par page, sans jamais couper un groupe. */
 export const PAGE_SIZE = 50;
+
+export function decouperEnPages(article: ArticleEntry): string[][][] {
+  const pages: string[][][] = [];
+  let courante: string[][] = [];
+  let taille = 0;
+  for (const g of article.groupes) {
+    if (courante.length > 0 && taille + g.length > PAGE_SIZE) {
+      pages.push(courante);
+      courante = [];
+      taille = 0;
+    }
+    courante.push(g);
+    taille += g.length;
+  }
+  if (courante.length > 0) pages.push(courante);
+  return pages;
+}
 
 export async function getArticleAmendements(
   texte: string,
   article: ArticleEntry,
   page: number,
 ) {
-  const uids = article.uids.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const uids = (decouperEnPages(article)[page - 1] ?? []).flat();
   return cachedOnDisk(
     key("amdts", texte, article.id, String(page), uids.join(",")),
     SQL_AMENDEMENTS + SQL_SIGNATAIRES,

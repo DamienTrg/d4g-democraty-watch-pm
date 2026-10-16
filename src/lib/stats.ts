@@ -1,6 +1,7 @@
 import "server-only";
 import { cachedOnDisk, type Calcul } from "@/lib/cache";
 import { longQuery } from "@/lib/db";
+import { texteDecode } from "@/lib/sql-texte";
 
 /*
  * Indicateurs sur les textes de loi.
@@ -130,61 +131,6 @@ select
   count(*) filter (where nb > 100)::int                              as b7
 from par_article;
 `;
-
-/*
- * Entités HTML présentes dans les dispositifs (ex. « alin&#233;a ») :
- * on les décode pour que « é » et « &#233; » donnent le même texte.
- * Les entités restantes, plus rares, sont ensuite supprimées.
- */
-const ENTITES: [string[], string][] = [
-  [["&#233;", "&eacute;"], "é"],
-  [["&#232;", "&egrave;"], "è"],
-  [["&#234;", "&ecirc;"], "ê"],
-  [["&#235;", "&euml;"], "ë"],
-  [["&#224;", "&agrave;"], "à"],
-  [["&#226;", "&acirc;"], "â"],
-  [["&#228;", "&auml;"], "ä"],
-  [["&#231;", "&ccedil;"], "ç"],
-  [["&#238;", "&icirc;"], "î"],
-  [["&#239;", "&iuml;"], "ï"],
-  [["&#244;", "&ocirc;"], "ô"],
-  [["&#246;", "&ouml;"], "ö"],
-  [["&#249;", "&ugrave;"], "ù"],
-  [["&#251;", "&ucirc;"], "û"],
-  [["&#252;", "&uuml;"], "ü"],
-  [["&#255;", "&yuml;"], "ÿ"],
-  [["&#339;", "&oelig;"], "œ"],
-  [["&#230;", "&aelig;"], "æ"],
-  [["&#201;", "&Eacute;"], "É"],
-  [["&#200;", "&Egrave;"], "È"],
-  [["&#202;", "&Ecirc;"], "Ê"],
-  [["&#203;", "&Euml;"], "Ë"],
-  [["&#192;", "&Agrave;"], "À"],
-  [["&#194;", "&Acirc;"], "Â"],
-  [["&#199;", "&Ccedil;"], "Ç"],
-  [["&#206;", "&Icirc;"], "Î"],
-  [["&#207;", "&Iuml;"], "Ï"],
-  [["&#212;", "&Ocirc;"], "Ô"],
-  [["&#217;", "&Ugrave;"], "Ù"],
-  [["&#219;", "&Ucirc;"], "Û"],
-  [["&#220;", "&Uuml;"], "Ü"],
-  [["&#338;", "&OElig;"], "Œ"],
-  [["&#198;", "&AElig;"], "Æ"],
-  [["&#176;", "&deg;"], "°"],
-  // Espaces et apostrophes : utiles pour repérer « cet alinéa », « l’alinéa ».
-  [["&#160;", "&nbsp;", "&#8239;", "&#8201;"], " "],
-  [["&#8217;", "&rsquo;", "&#39;", "&#039;", "&apos;"], "'"],
-];
-
-/** Expression SQL : texte brut d'un dispositif (sans balises, entités décodées). */
-function texteDecode(expr: string): string {
-  let e = `regexp_replace(${expr}, '<[^>]+>', ' ', 'g')`;
-  for (const [alias, ch] of ENTITES) {
-    for (const a of alias)
-      e = `replace(${e}, '${a}', '${ch.replace(/'/g, "''")}')`;
-  }
-  return `regexp_replace(${e}, '&#?[a-z0-9]+;', '', 'gi')`;
-}
 
 /*
  * Amendements identiques = même texte en discussion, même article visé, même

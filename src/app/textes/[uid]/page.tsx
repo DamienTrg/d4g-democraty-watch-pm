@@ -8,7 +8,7 @@ import {
   libelleArticle,
   lienArticleAssemblee,
   lienTexteAssemblee,
-  PAGE_SIZE,
+  decouperEnPages,
   type Amendement,
   type ArticleEntry,
   type TexteIndex,
@@ -231,6 +231,113 @@ function Pagination({
   );
 }
 
+/** Décompte « Rejeté ×45 · Tombé ×5 », du plus fréquent au moins fréquent. */
+function decompte(valeurs: (string | null)[]) {
+  const n = new Map<string, number>();
+  for (const v of valeurs) if (v) n.set(v, (n.get(v) ?? 0) + 1);
+  return [...n.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function premierSignataire(a: Amendement) {
+  const p = a.signataires.find((s) => s.auteur) ?? a.signataires[0];
+  if (p) return { nom: p.nom, groupe: p.groupe };
+  return { nom: a.auteurLibelle ?? "Auteur non renseigné", groupe: null };
+}
+
+/** Plusieurs amendements au dispositif identique, repliés sous un seul titre. */
+function GroupeIdentiques({ amendements }: { amendements: Amendement[] }) {
+  const modele = amendements[0];
+  const sorts = decompte(amendements.map((a) => a.sort));
+  const groupes = decompte(amendements.map((a) => premierSignataire(a).groupe));
+  const extrait =
+    modele.dispositif.length > 220
+      ? `${modele.dispositif.slice(0, 220).trimEnd()}…`
+      : modele.dispositif;
+  return (
+    <details className="group rounded-lg border border-line bg-surface-1 [&[open]]:bg-transparent">
+      <summary className="flex cursor-pointer list-none flex-col gap-2 p-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span
+            aria-hidden
+            className="inline-block text-muted transition-transform group-open:rotate-90"
+          >
+            ▸
+          </span>
+          <span className="font-semibold">
+            {int.format(amendements.length)} amendements identiques
+          </span>
+          <span className="text-sm text-muted tabular-nums">
+            n° {amendements[0].numero} à{" "}
+            {amendements[amendements.length - 1].numero}
+          </span>
+        </span>
+        <span className="whitespace-pre-line text-sm leading-6">
+          {extrait || <em className="text-muted">Dispositif non publié.</em>}
+        </span>
+        <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          {sorts.length > 0 && (
+            <span>
+              {sorts.map(([s, n]) => `${s} ×${int.format(n)}`).join(" · ")}
+            </span>
+          )}
+          {groupes.length > 0 && (
+            <span>
+              Groupes :{" "}
+              {groupes.map(([g, n]) => `${g} ×${int.format(n)}`).join(" · ")}
+            </span>
+          )}
+        </span>
+      </summary>
+
+      <div className="flex flex-col gap-4 border-t border-line p-4">
+        {modele.dispositif.length > extrait.length && (
+          <p className="whitespace-pre-line text-sm leading-6">
+            {modele.dispositif}
+          </p>
+        )}
+        {modele.expose && (
+          <details className="text-sm">
+            <summary className="cursor-pointer text-muted">
+              Exposé sommaire (du n° {modele.numero})
+            </summary>
+            <p className="mt-2 whitespace-pre-line leading-6 text-muted">
+              {modele.expose}
+            </p>
+          </details>
+        )}
+        <table className="w-full text-left text-sm">
+          <thead className="text-muted">
+            <tr>
+              <th className="py-1 pr-3 font-normal">N°</th>
+              <th className="py-1 pr-3 font-normal">Premier signataire</th>
+              <th className="py-1 font-normal">Sort</th>
+            </tr>
+          </thead>
+          <tbody>
+            {amendements.map((a) => {
+              const p = premierSignataire(a);
+              return (
+                <tr key={a.uid} className="border-t border-line align-top">
+                  <td className="py-1.5 pr-3 tabular-nums">{a.numero}</td>
+                  <td className="py-1.5 pr-3">
+                    {p.nom}
+                    {p.groupe && (
+                      <span className="text-muted"> ({p.groupe})</span>
+                    )}
+                  </td>
+                  <td className="py-1.5">
+                    <Badge sort={a.sort} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
 async function Amendements({
   index,
   article,
@@ -240,7 +347,8 @@ async function Amendements({
   article: ArticleEntry;
   page: number;
 }) {
-  const pages = Math.max(1, Math.ceil(article.nb / PAGE_SIZE));
+  const decoupage = decouperEnPages(article);
+  const pages = Math.max(1, decoupage.length);
   const p = Math.min(Math.max(1, page), pages);
   let liste: Amendement[];
   try {
@@ -252,19 +360,36 @@ async function Amendements({
       </p>
     );
   }
-  const adoptes = liste.filter((a) => a.sort && /^adopt/i.test(a.sort)).length;
+  const parUid = new Map(liste.map((a) => [a.uid, a]));
+  const blocs = (decoupage[p - 1] ?? [])
+    .map((g) =>
+      g.map((u) => parUid.get(u)).filter((a): a is Amendement => Boolean(a)),
+    )
+    .filter((g) => g.length > 0);
+
+  const nbGroupes = article.groupes.filter((g) => g.length > 1).length;
+  const nbDansGroupes = article.groupes
+    .filter((g) => g.length > 1)
+    .reduce((s, g) => s + g.length, 0);
+
   return (
     <div className="flex flex-col gap-4">
-      {liste.some((a) => a.sort) && (
+      {nbGroupes > 0 && (
         <p className="text-sm text-muted">
-          Sur cette page : {int.format(adoptes)} adopté{adoptes > 1 ? "s" : ""}{" "}
-          sur {int.format(liste.length)}.
+          {int.format(nbDansGroupes)} des {int.format(article.nb)} amendements
+          de cet article forment {int.format(nbGroupes)} groupe
+          {nbGroupes > 1 ? "s" : ""} d&apos;amendements identiques, repliés
+          ci-dessous.
         </p>
       )}
       <Pagination uid={index.uid} article={article} page={p} pages={pages} />
-      {liste.map((a) => (
-        <CarteAmendement key={a.uid} a={a} />
-      ))}
+      {blocs.map((g) =>
+        g.length > 1 ? (
+          <GroupeIdentiques key={g[0].uid} amendements={g} />
+        ) : (
+          <CarteAmendement key={g[0].uid} a={g[0]} />
+        ),
+      )}
       <Pagination uid={index.uid} article={article} page={p} pages={pages} />
     </div>
   );

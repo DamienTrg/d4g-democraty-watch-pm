@@ -94,10 +94,12 @@ async function main() {
         await Promise.all(Array.from({ length: 4 }, travailleur));
         clearInterval(suivi);
 
-        const dir = path.join("docs", "textes", uid);
+        // Données de travail, hors de docs/ : plusieurs dizaines de Mo pour
+        // un PLF, inutiles en ligne (seules les pages HTML sont publiées).
+        const dir = path.join(".cache", "static", "textes");
         await mkdir(dir, { recursive: true });
         await writeFile(
-          path.join(dir, "donnees.json"),
+          path.join(dir, `${uid}.json`),
           JSON.stringify({
             generatedAt: new Date().toISOString(),
             index,
@@ -105,9 +107,7 @@ async function main() {
           }),
         );
         textes.push({ uid, titre: index.titre });
-        console.log(
-          `✓ ${index.titre} : ${index.total} amendements → ${dir}/donnees.json`,
-        );
+        console.log(`✓ ${index.titre} : ${index.total} amendements récupérés`);
       } catch (error) {
         console.error(
           `✗ Export du texte ${uid} impossible :`,

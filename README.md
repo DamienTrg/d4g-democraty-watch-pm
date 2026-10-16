@@ -75,7 +75,8 @@ Elle ne se connecte pas à la base : elle affiche un instantané des chiffres.
 Pour mettre à jour les chiffres plus tard, refaire les étapes 1 et 2.
 
 La page statique inclut aussi le **PLF le plus récent, article par article** (`docs/textes/<uid>/`),
-avec ses amendements et les groupes d'amendements identiques. Pour publier d'autres textes :
+avec ses amendements et les groupes d'amendements identiques. Seules les pages HTML sont publiées ;
+les données brutes du texte (plusieurs dizaines de Mo) restent dans `.cache/static/`, hors du dépôt. Pour publier d'autres textes :
 
 ```bash
 STATIC_TEXTES=PRJLANR5L17B0324,PRJLANR5L16B0760 npm run static

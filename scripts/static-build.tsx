@@ -92,13 +92,18 @@ fetch("sommaire.html").then(r => r.ok ? r.text() : Promise.reject()).then(html =
 async function genererTexte(uid: string) {
   const dir = path.join(DOCS, "textes", uid);
   const exp = JSON.parse(
-    await readFile(path.join(dir, "donnees.json"), "utf8"),
+    await readFile(
+      path.join(".cache", "static", "textes", `${uid}.json`),
+      "utf8",
+    ),
   ) as TexteExport;
   const { index } = exp;
 
   // Retire les pages d'une génération précédente (articles renumérotés…).
   for (const f of await readdir(dir)) {
-    if (f.endsWith(".html")) await rm(path.join(dir, f));
+    // donnees.json : publié par les premières versions, trop lourd (> 50 Mo).
+    if (f.endsWith(".html") || f === "donnees.json")
+      await rm(path.join(dir, f));
   }
 
   const lien: LienFn = (article, page = 1) =>
@@ -148,11 +153,7 @@ async function genererTexte(uid: string) {
           </VueTexte>
           <footer className="border-t border-line pt-6 text-sm text-muted">
             Instantané du {formatDate(new Date(exp.generatedAt))}. Source :
-            Assemblée nationale (open data). Données brutes :{" "}
-            <a className="underline" href="donnees.json">
-              donnees.json
-            </a>
-            .
+            Assemblée nationale (open data).
           </footer>
         </main>,
       );

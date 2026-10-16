@@ -6,7 +6,8 @@ import {
   getArticleAmendements,
   getTexteIndex,
   libelleArticle,
-  lienAssemblee,
+  lienArticleAssemblee,
+  lienTexteAssemblee,
   PAGE_SIZE,
   type Amendement,
   type ArticleEntry,
@@ -74,16 +75,47 @@ function Sommaire({
   );
 }
 
+/** Explications affichées au survol des sorts les moins parlants. */
+const EXPLICATIONS: [RegExp, string][] = [
+  [
+    /irrecevable\s*40/i,
+    "Irrecevable au titre de l'article 40 de la Constitution : l'amendement aurait diminué les ressources publiques ou créé ou aggravé une charge publique.",
+  ],
+  [
+    /irrecevable.*45|cavalier/i,
+    "Irrecevable au titre de l'article 45 de la Constitution : sans lien, même indirect, avec le texte (« cavalier législatif »).",
+  ],
+  [
+    /irrecevable.*(lolf|lfss|47)/i,
+    "Irrecevable au regard des règles propres aux lois de finances ou de financement de la sécurité sociale (LOLF / LOLFSS).",
+  ],
+  [
+    /irrecevable/i,
+    "Déclaré irrecevable : l'amendement n'a pas été mis en discussion.",
+  ],
+  [
+    /tomb/i,
+    "Tombé : devenu sans objet, généralement après l'adoption ou le rejet d'un autre amendement ou de l'article.",
+  ],
+  [
+    /non soutenu/i,
+    "Non soutenu : aucun de ses auteurs n'était présent pour le défendre en séance.",
+  ],
+  [/retir/i, "Retiré par son auteur avant le vote."],
+];
+
 function Badge({ sort }: { sort: string | null }) {
   if (!sort) return null;
   const adopte = /^adopt/i.test(sort);
+  const explication = EXPLICATIONS.find(([re]) => re.test(sort))?.[1];
   return (
     <span
+      title={explication}
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${
         adopte
           ? "border-green-700/40 text-green-800 dark:border-green-400/40 dark:text-green-300"
           : "border-line text-muted"
-      }`}
+      } ${explication ? "cursor-help" : ""}`}
     >
       {adopte && <span aria-hidden>✓</span>}
       {sort}
@@ -277,7 +309,7 @@ async function Texte({
     index.articles.find((a) => a.position === "A") ??
     index.articles[0];
   const page = Number(one(sp.page) ?? 1) || 1;
-  const lien = lienAssemblee(article.url);
+  const lien = lienArticleAssemblee(index.uid, article.titre);
   const nbArticles = index.articles.filter((a) => a.position === "A").length;
 
   return (
@@ -288,6 +320,16 @@ async function Texte({
         {index.titreLong && index.titreLong !== index.titre && (
           <p className="text-muted">{index.titreLong}</p>
         )}
+        <p className="text-sm">
+          <a
+            className="underline"
+            href={lienTexteAssemblee(index.uid)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Texte intégral sur le site de l&apos;Assemblée ↗
+          </a>
+        </p>
         <p className="text-sm text-muted">
           {int.format(index.total)} amendements sur {int.format(nbArticles)}{" "}
           articles
@@ -329,20 +371,16 @@ async function Texte({
               {int.format(article.nb)} amendement{article.nb > 1 ? "s" : ""}
               {article.position !== "A" &&
                 " proposant d'insérer un article additionnel"}
-              {lien && (
-                <>
-                  {" · "}
-                  <a
-                    className="underline"
-                    href={lien}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Lire le texte de l&apos;article sur le site de
-                    l&apos;Assemblée ↗
-                  </a>
-                </>
-              )}
+              {" · "}
+              <a
+                className="underline"
+                href={lien}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ouvre le texte intégral et fait défiler jusqu'à l'article (navigateurs récents)"
+              >
+                Lire l&apos;article dans le texte de l&apos;Assemblée ↗
+              </a>
             </p>
           </div>
           <Suspense

@@ -329,9 +329,32 @@ export async function getArticleAmendements(
   );
 }
 
-/** Lien vers l'article sur le site de l'Assemblée, quand l'amendement le fournit. */
-export function lienAssemblee(url: string | null) {
-  if (!url) return null;
-  if (/^https?:\/\//.test(url)) return url;
-  return `https://www.assemblee-nationale.fr${url.startsWith("/") ? "" : "/"}${url}`;
+/*
+ * Lien vers le texte intégral sur le site de l'Assemblée.
+ *
+ * Les adresses stockées dans les amendements (urlDivisionTexteVise, du type
+ * « /15/textes/2623.asp#D_Article_56 ») renvoient vers l'ancien site et ne
+ * fonctionnent plus. On utilise à la place l'adresse du texte en open data,
+ * construite à partir de son identifiant et valable pour tous les textes.
+ *
+ * Pour aller directement à l'article, on ajoute un « fragment de texte »
+ * (#:~:text=ARTICLE 3) : les navigateurs récents font défiler jusqu'à la
+ * première occurrence ; les autres ouvrent simplement le texte en haut.
+ */
+export function lienTexteAssemblee(texteUid: string) {
+  return `https://www.assemblee-nationale.fr/dyn/opendata/${encodeURIComponent(texteUid)}.html`;
+}
+
+export function lienArticleAssemblee(texteUid: string, titreArticle: string) {
+  const base = lienTexteAssemblee(texteUid);
+  const t = titreArticle.toLowerCase();
+  let cible: string | null = null;
+  if (/liminaire/.test(t)) cible = "ARTICLE liminaire";
+  else {
+    const m = t.match(
+      /^article\s+(\d+)(?:er)?(?:\s+(bis|ter|quater|quinquies|sexies|septies|octies|nonies|decies))?\b/,
+    );
+    if (m) cible = `ARTICLE ${m[1]}${m[2] ? ` ${m[2]}` : ""}`;
+  }
+  return cible ? `${base}#:~:text=${encodeURIComponent(cible)}` : base;
 }
